@@ -9,13 +9,16 @@ import {
   Building2,
   LogOut,
   FileStack,
-  TrendingUp
+  TrendingUp,
+  ChevronLeft,
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { getCompanyInfo, clearAllData } from '../../utils/storage';
 import ConfirmDialog from '../shared/ConfirmDialog';
 
-const Sidebar = () => {
+const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = false }) => {
   const navigate = useNavigate();
   const companyInfo = useMemo(() => getCompanyInfo(), []);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
@@ -31,59 +34,103 @@ const Sidebar = () => {
     { path: '/settings', icon: Settings, label: 'الإعدادات' },
   ];
 
+  const handleLinkClick = () => {
+    onNavigate?.();
+  };
+
   return (
-    <aside className="w-[260px] bg-[#1e293b] flex flex-col border-l border-slate-700 flex-shrink-0">
+    <aside className={`bg-[#1e293b] flex flex-col border-l border-slate-700 h-full ${collapsed ? 'items-center' : ''}`}>
       {/* Logo & Company Info */}
-      <div className="p-4 border-b border-slate-700">
-        <div className="flex items-center gap-3">
+      <div className={`p-3 sm:p-4 border-b border-slate-700 ${collapsed ? 'py-4' : ''}`}>
+        <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
+          {isMobile && (
+            <button
+              onClick={onNavigate}
+              className="absolute top-4 left-4 p-2 rounded-lg hover:bg-slate-700 text-slate-400 lg:hidden"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          )}
+          
           {companyInfo?.logo ? (
             <img
               src={companyInfo.logo}
               alt={companyInfo.name}
-              className="w-12 h-12 object-contain rounded-lg bg-white p-1"
+              className={`object-contain rounded-lg bg-white p-1 flex-shrink-0 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}
             />
           ) : (
-            <div className="w-12 h-12 bg-[#3b82f6] rounded-lg flex items-center justify-center flex-shrink-0">
-              <Building2 className="w-7 h-7 text-white" />
+            <div className={`bg-[#3b82f6] rounded-lg flex items-center justify-center flex-shrink-0 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+              <Building2 className={`${collapsed ? 'w-5 h-5' : 'w-7 h-7'} text-white`} />
             </div>
           )}
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-white truncate">
-              {companyInfo?.name || 'BuildMaster Pro'}
-            </h1>
-            <p className="text-xs text-slate-400">نظام إدارة المشاريع</p>
-          </div>
+          
+          {!collapsed && (
+            <div className="min-w-0 flex-1">
+              <h1 className="text-lg font-bold text-white truncate">
+                {companyInfo?.name || 'BuildMaster Pro'}
+              </h1>
+              <p className="text-xs text-slate-400">نظام إدارة المشاريع</p>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
+      <nav className={`flex-1 p-2 sm:p-3 space-y-1 overflow-y-auto overflow-x-hidden ${collapsed ? 'px-1' : ''}`}>
         {navItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) =>
-              `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
-                isActive 
-                  ? 'bg-blue-600 text-white' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+              `flex items-center gap-3 px-3 py-2.5 sm:py-3 rounded-lg transition-all cursor-pointer group
+              ${collapsed ? 'justify-center' : ''}
+              ${isActive 
+                ? 'bg-blue-600 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
               }`
             }
+            onClick={handleLinkClick}
+            title={collapsed ? item.label : undefined}
           >
-            <item.icon className="w-5 h-5 flex-shrink-0" />
-            <span className="font-medium">{item.label}</span>
+            <item.icon className={`flex-shrink-0 ${collapsed ? 'w-5 h-5' : 'w-5 h-5'}`} />
+            {!collapsed && (
+              <span className="font-medium text-sm truncate">{item.label}</span>
+            )}
+            {collapsed && (
+              <span className="absolute right-full mr-2 px-2 py-1 bg-slate-800 text-white text-sm rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50">
+                {item.label}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>
 
+      {/* Collapse Toggle (Desktop only) */}
+      {!isMobile && onToggleCollapse && (
+        <button
+          onClick={onToggleCollapse}
+          className="hidden lg:flex items-center justify-center p-2 mx-2 mb-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+          title={collapsed ? 'توسيع القائمة' : 'طي القائمة'}
+        >
+          {collapsed ? (
+            <ChevronRight className="w-5 h-5" />
+          ) : (
+            <ChevronLeft className="w-5 h-5" />
+          )}
+        </button>
+      )}
+
       {/* Logout */}
-      <div className="p-4 border-t border-slate-700">
+      <div className={`p-2 sm:p-3 border-t border-slate-700 ${collapsed ? 'px-1' : ''}`}>
         <button 
           onClick={() => setLogoutConfirm(true)}
-          className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all"
+          className={`flex items-center gap-3 px-3 py-2.5 w-full rounded-lg text-slate-400 hover:bg-slate-700 hover:text-white transition-all ${collapsed ? 'justify-center' : ''}`}
+          title={collapsed ? 'تسجيل الخروج' : undefined}
         >
-          <LogOut className="w-5 h-5" />
-          <span className="font-medium">تسجيل الخروج</span>
+          <LogOut className="w-5 h-5 flex-shrink-0" />
+          {!collapsed && (
+            <span className="font-medium text-sm">تسجيل الخروج</span>
+          )}
         </button>
       </div>
 

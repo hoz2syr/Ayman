@@ -21,7 +21,7 @@ export const ToastProvider = ({ children }) => {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-4 left-4 z-50 space-y-2">
+      <div className="fixed bottom-4 left-4 right-4 md:right-auto z-50 space-y-2 md:space-y-2 md:w-72">
         {toasts.map(toast => (
           <ToastItem
             key={toast.id}
@@ -64,14 +64,14 @@ const ToastItem = ({ message, type = 'success', duration = 3000, onClose }) => {
 
   return (
     <div
-      className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-all duration-300 ${colors[type]} ${
+      className={`flex items-center gap-2 md:gap-3 px-3 md:px-4 py-2 md:py-3 rounded-lg border transition-all duration-300 ${colors[type]} ${
         isVisible ? 'translate-x-0 opacity-100' : '-translate-x-full opacity-0'
       }`}
     >
       {icons[type]}
-      <span className="text-white">{message}</span>
-      <button onClick={() => { setIsVisible(false); setTimeout(onClose, 300); }} className="mr-2 hover:opacity-70">
-        <X className="w-4 h-4" />
+      <span className="text-white text-sm md:text-base flex-1">{message}</span>
+      <button onClick={() => { setIsVisible(false); setTimeout(onClose, 300); }} className="mr-1 md:mr-2 hover:opacity-70 p-1">
+        <X className="w-3 h-3 md:w-4 md:h-4" />
       </button>
     </div>
   );

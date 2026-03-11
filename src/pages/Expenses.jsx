@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, FileDown, Calendar, Filter } from 'lucide-react';
 import { getExpenses, deleteExpense, getProjects, getSettings } from '../utils/storage';
 import ExpenseForm from '../components/forms/ExpenseForm';
-import { ExpensePDFButton } from '../utils/pdfTemplates';
+import { generateExpensesPDF } from '../utils/pdfGenerator';
 import { exportToWord } from '../utils/exportWord';
 import DatePicker from '../components/shared/DatePicker';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
@@ -217,6 +217,23 @@ const Expenses = () => {
     XLSX.writeFile(wb, 'expense_report.xlsx');
   };
 
+  const handleExportPDF = async () => {
+    const expenseData = prepareExpenseData();
+    const expensesWithProject = expenseData.expenses.map(e => ({
+      ...e,
+      projectName: getProjectName(filteredExpenses.find(fe => fe.description === e.description && fe.date === e.date)?.projectId),
+    }));
+    
+    const result = await generateExpensesPDF(expensesWithProject, companyInfo, {
+      projectName: expenseData.projectName,
+      dateRange: expenseData.dateRange,
+    });
+    
+    if (!result) {
+      showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+    }
+  };
+
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('ar-SA', { 
       minimumFractionDigits: 2,
@@ -231,49 +248,42 @@ const Expenses = () => {
         <div className="flex items-center gap-2">
           <h1 className="text-2xl font-bold text-white">المصاريف</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <button 
             onClick={handleExportExcel}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
           >
             <FileDown className="w-4 h-4" />
-            Excel
+            <span className="hidden sm:inline">Excel</span>
           </button>
-          <ExpensePDFButton
-            data={prepareExpenseData()}
-            company={companyInfo}
-            fileName="تقرير_المصاريف.pdf"
+          <button 
+            onClick={handleExportPDF}
+            className="flex items-center gap-1 md:gap-2 px-2 md:px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
           >
-            {(loading) => (
-              <button 
-                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                disabled={loading}
-              >
-                <FileDown className="w-4 h-4" />
-                {loading ? '...' : 'PDF'}
-              </button>
-            )}
-          </ExpensePDFButton>
+            <FileDown className="w-4 h-4" />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
           <button 
             onClick={() => handleOpenModal()}
-            className="btn-primary flex items-center gap-2"
+            className="btn-primary flex items-center gap-1 md:gap-2 text-sm"
           >
             <Plus className="w-5 h-5" />
-            إضافة مصروف
+            <span className="hidden sm:inline">إضافة مصروف</span>
+            <span className="sm:hidden">+</span>
           </button>
         </div>
       </div>
 
       {/* Filter Bar */}
       <div className="card">
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-4">
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-400" />
             <span className="text-sm text-slate-400">الفلترة:</span>
           </div>
           
           {/* Date Type Filter */}
-          <div className="flex gap-1 bg-slate-700 rounded-lg p-1">
+          <div className="flex gap-1 bg-slate-700 rounded-lg p-1 overflow-x-auto">
             {[
               { value: 'all', label: 'الكل' },
               { value: 'daily', label: 'يومي' },
@@ -283,7 +293,7 @@ const Expenses = () => {
               <button
                 key={opt.value}
                 onClick={() => setDateFilter(opt.value)}
-                className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                className={`px-2 md:px-3 py-1.5 text-xs md:text-sm rounded-md transition-colors whitespace-nowrap ${
                   dateFilter === opt.value
                     ? 'bg-[#3b82f6] text-white'
                     : 'text-slate-400 hover:text-white'
@@ -295,20 +305,20 @@ const Expenses = () => {
           </div>
 
           {/* Date Range */}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
             <Calendar className="w-4 h-4 text-slate-400" />
             <DatePicker
               value={startDate}
               onChange={(date) => setStartDate(date)}
               placeholder="من"
-              className="w-36"
+              className="w-full sm:w-32 md:w-36"
             />
             <span className="text-slate-400">-</span>
             <DatePicker
               value={endDate}
               onChange={(date) => setEndDate(date)}
               placeholder="إلى"
-              className="w-36"
+              className="w-full sm:w-32 md:w-36"
             />
           </div>
 
@@ -383,39 +393,39 @@ const Expenses = () => {
             <table className="w-full">
               <thead className="bg-slate-800">
                 <tr>
-                  <th className="text-right p-3 text-sm text-slate-400">الوصف</th>
-                  <th className="text-right p-3 text-sm text-slate-400">النوع</th>
-                  <th className="text-right p-3 text-sm text-slate-400">المشروع</th>
-                  <th className="text-right p-3 text-sm text-slate-400">التاريخ</th>
-                  <th className="text-right p-3 text-sm text-slate-400">دولار</th>
-                  <th className="text-right p-3 text-sm text-slate-400">ل.س</th>
-                  <th className="text-center p-3 text-sm text-slate-400">إجراءات</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400">الوصف</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400 hidden sm:table-cell">النوع</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400 hidden md:table-cell">المشروع</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400">التاريخ</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400">دولار</th>
+                  <th className="text-right p-2 md:p-3 text-xs md:text-sm text-slate-400 hidden sm:table-cell">ل.س</th>
+                  <th className="text-center p-2 md:p-3 text-xs md:text-sm text-slate-400">إجراءات</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredExpenses.map((expense) => (
                   <tr key={expense.id} className="border-t border-slate-700 hover:bg-slate-700/30">
-                    <td className="p-3 text-white">{expense.description}</td>
-                    <td className="p-3">
+                    <td className="p-2 md:p-3 text-white text-sm">{expense.description}</td>
+                    <td className="p-2 md:p-3 hidden sm:table-cell">
                       <span className={`px-2 py-1 rounded-full text-xs text-white ${getCategoryColor(expense.category)}`}>
                         {getCategoryLabel(expense.category)}
                       </span>
                     </td>
-                    <td className="p-3 text-slate-300">{getProjectName(expense.projectId)}</td>
-                    <td className="p-3 text-slate-300">{expense.date}</td>
-                    <td className="p-3 text-green-400 font-medium">
+                    <td className="p-2 md:p-3 text-slate-300 text-sm hidden md:table-cell">{getProjectName(expense.projectId)}</td>
+                    <td className="p-2 md:p-3 text-slate-300 text-sm">{expense.date}</td>
+                    <td className="p-2 md:p-3 text-green-400 font-medium text-sm">
                       {expense.amountUSD ? formatCurrency(expense.amountUSD) : '-'}
                     </td>
-                    <td className="p-3 text-yellow-400 font-medium">
+                    <td className="p-2 md:p-3 text-yellow-400 font-medium text-sm hidden sm:table-cell">
                       {expense.amountSYP ? formatCurrency(expense.amountSYP) : '-'}
                     </td>
-                    <td className="p-3">
-                      <div className="flex justify-center gap-2">
+                    <td className="p-2 md:p-3">
+                      <div className="flex justify-center gap-1 md:gap-2">
                         <button 
                           onClick={() => handleOpenModal(expense)}
-                          className="p-2 text-blue-500 hover:bg-slate-700 rounded"
+                          className="p-1.5 md:p-2 text-blue-500 hover:bg-slate-700 rounded"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3 h-3 md:w-4 md:h-4" />
                         </button>
                         <button 
                           onClick={() => handleDelete(expense.id)}
