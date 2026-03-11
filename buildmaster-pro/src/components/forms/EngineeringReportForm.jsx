@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Save, FileDown, FileText, Upload, X, Image } from 'lucide-react';
-import { saveReport, generateReportNumber, getSettings } from '../utils/storage';
-import { ReportPDFButton } from '../../utils/pdfTemplates';
+import { saveReport, generateReportNumber, getSettings } from '../../utils/storage';
+import { generateReportPDF } from '../../utils/pdfGenerator';
 import { exportToWord } from '../../utils/exportWord';
 import Modal from '../shared/Modal';
 import DatePicker from '../shared/DatePicker';
@@ -130,6 +130,16 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
     setLoading(false);
   };
 
+  const handleExportPDF = async () => {
+    setLoading(true);
+    try {
+      await generateReportPDF(formData, companyInfo);
+    } catch (error) {
+      console.error('Error exporting PDF:', error);
+    }
+    setLoading(false);
+  };
+
   const formatFileSize = (bytes) => {
     if (bytes < 1024) return bytes + ' B';
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
@@ -149,21 +159,15 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
               تعديل
             </button>
             <div className="flex gap-2">
-              <ReportPDFButton
-                data={prepareReportData()}
-                company={companyInfo}
-                fileName={`تقرير-${formData.reportNumber}.pdf`}
+              <button
+                type="button"
+                onClick={handleExportPDF}
+                disabled={loading}
+                className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
               >
-                {(loadingPDF) => (
-                  <button
-                    disabled={loadingPDF}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                  >
-                    <FileDown className="w-4 h-4" />
-                    {loadingPDF ? '...' : 'تصدير PDF'}
-                  </button>
-                )}
-              </ReportPDFButton>
+                <FileDown className="w-4 h-4" />
+                {loading ? '...' : 'تصدير PDF'}
+              </button>
               <button
                 onClick={handleExportWord}
                 disabled={loading}

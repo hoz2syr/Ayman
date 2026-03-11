@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
 import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings } from '../utils/storage';
 import InvoiceForm from '../components/forms/InvoiceForm';
-import { InvoicePDFButton } from '../utils/pdfTemplates';
+import { generateInvoicePDF } from '../utils/pdfGenerator';
 import { exportToWord } from '../utils/exportWord';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
@@ -126,6 +126,15 @@ const Invoices = () => {
     content.docNumber = invoice.invoiceNumber;
     content.date = invoice.issueDate;
     await exportToWord(content, `فاتورة-${invoice.invoiceNumber}`);
+  };
+
+  const handleExportPDF = async (invoice) => {
+    const invoiceData = prepareInvoiceData(invoice);
+    const result = await generateInvoicePDF(invoiceData, companyInfo);
+    
+    if (!result) {
+      showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+    }
   };
 
   const generateInvoiceContent = (invoice) => {
@@ -333,25 +342,13 @@ const Invoices = () => {
                   </td>
                   <td className="py-3 px-4">
                     <div className="flex gap-1">
-                      <InvoicePDFButton
-                        data={prepareInvoiceData(invoice)}
-                        company={companyInfo}
-                        fileName={`فاتورة-${invoice.invoiceNumber}.pdf`}
+                      <button 
+                        onClick={() => handleExportPDF(invoice)}
+                        className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded"
+                        title="تصدير PDF"
                       >
-                        {(loading) => (
-                          <button 
-                            className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded disabled:opacity-50"
-                            title="تصدير PDF"
-                            disabled={loading}
-                          >
-                            {loading ? (
-                              <span className="w-4 h-4 block animate-pulse">...</span>
-                            ) : (
-                              <FileText className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
-                      </InvoicePDFButton>
+                        <FileText className="w-4 h-4" />
+                      </button>
                       <button 
                         onClick={() => handleExportWord(invoice)}
                         className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded"

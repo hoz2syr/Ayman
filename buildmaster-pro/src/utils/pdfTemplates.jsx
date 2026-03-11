@@ -894,11 +894,7 @@ export const InvoicePDFButton = ({ data, company, children, fileName }) => {
   };
   
   if (typeof children === 'function') {
-    return (
-      <button type="button" onClick={handleClick} disabled={loading}>
-        {children(loading)}
-      </button>
-    );
+    return children({ loading, handleClick });
   }
   
   return (
@@ -920,11 +916,7 @@ export const ExpensePDFButton = ({ data, company, children, fileName }) => {
   };
   
   if (typeof children === 'function') {
-    return (
-      <button type="button" onClick={handleClick} disabled={loading}>
-        {children(loading)}
-      </button>
-    );
+    return children({ loading, handleClick });
   }
   
   return (
@@ -946,11 +938,7 @@ export const DecisionPDFButton = ({ data, company, children, fileName }) => {
   };
   
   if (typeof children === 'function') {
-    return (
-      <button type="button" onClick={handleClick} disabled={loading}>
-        {children(loading)}
-      </button>
-    );
+    return children({ loading, handleClick });
   }
   
   return (
@@ -972,11 +960,7 @@ export const ReportPDFButton = ({ data, company, children, fileName }) => {
   };
   
   if (typeof children === 'function') {
-    return (
-      <button type="button" onClick={handleClick} disabled={loading}>
-        {children(loading)}
-      </button>
-    );
+    return children({ loading, handleClick });
   }
   
   return (
