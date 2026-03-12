@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Setup from './pages/Setup';
 import Home from './pages/Home';
@@ -12,52 +12,115 @@ import Contractors from './pages/Contractors';
 import Sales from './pages/Sales';
 import Settings from './pages/Settings';
 import DocViewer from './pages/DocViewer';
+import Login from './pages/Login';
 import { ToastProvider } from './components/shared/Toast';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { isCompanySetup, getCompanyInfo } from './utils/storage';
 
-function App() {
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
+  if (!isAuthenticated) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+  
+  return children;
+};
+
+const AuthRoute = ({ children }) => {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+  
+  if (isAuthenticated) {
+    return <Navigate to={location.state?.from?.pathname || '/home'} replace />;
+  }
+  
+  return children;
+};
+
+const AppRoutes = () => {
   const companyInfo = useMemo(() => getCompanyInfo(), []);
   const needsSetup = useMemo(() => !isCompanySetup(), []);
 
   if (!companyInfo) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
-        <div className="text-white">جاري التحميل...</div>
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <ToastProvider>
-      <BrowserRouter>
-        <Routes>
-          {/* Setup route - only shown if company not setup */}
-          {needsSetup && (
-            <Route path="/" element={<Setup />} />
-          )}
+    <Routes>
+      {/* Login Route */}
+      <Route path="/login" element={
+        <AuthRoute>
+          <Login />
+        </AuthRoute>
+      } />
 
-          {/* Public document viewer - without layout */}
-          <Route path="/view/:docType/:docNumber" element={<DocViewer />} />
+      {/* Setup route - only shown if company not setup */}
+      {needsSetup && (
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Setup />
+          </ProtectedRoute>
+        } />
+      )}
 
-          {/* Main app routes with Layout */}
-          <Route element={<Layout />}>
-            <Route path="/home" element={<Home />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/projects/:id" element={<ProjectDetail />} />
-            <Route path="/engineering" element={<EngineeringDocs />} />
-            <Route path="/expenses" element={<Expenses />} />
-            <Route path="/invoices" element={<Invoices />} />
-            <Route path="/contractors" element={<Contractors />} />
-            <Route path="/sales" element={<Sales />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+      {/* Public document viewer - without layout */}
+      <Route path="/view/:docType/:docNumber" element={<DocViewer />} />
 
-          {/* Redirect to setup or home based on company setup */}
-          <Route path="/" element={<Navigate to={needsSetup ? '/' : '/home'} replace />} />
-          <Route path="*" element={<Navigate to="/home" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </ToastProvider>
+      {/* Main app routes with Layout */}
+      <Route element={
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      }>
+        <Route path="/home" element={<Home />} />
+        <Route path="/projects" element={<Projects />} />
+        <Route path="/projects/:id" element={<ProjectDetail />} />
+        <Route path="/engineering" element={<EngineeringDocs />} />
+        <Route path="/expenses" element={<Expenses />} />
+        <Route path="/invoices" element={<Invoices />} />
+        <Route path="/contractors" element={<Contractors />} />
+        <Route path="/sales" element={<Sales />} />
+        <Route path="/settings" element={<Settings />} />
+      </Route>
+
+      {/* Redirect to login, setup or home based on company setup */}
+      <Route path="/" element={<Navigate to={needsSetup ? '/' : '/login'} replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
+  );
+};
+
+function App() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </ToastProvider>
+    </AuthProvider>
   );
 }
 

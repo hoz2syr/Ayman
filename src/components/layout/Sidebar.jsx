@@ -12,16 +12,19 @@ import {
   TrendingUp,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  User
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { getCompanyInfo, clearAllData } from '../../utils/storage';
+import { useAuth } from '../../contexts/AuthContext';
 import ConfirmDialog from '../shared/ConfirmDialog';
 
 const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = false }) => {
   const navigate = useNavigate();
   const companyInfo = useMemo(() => getCompanyInfo(), []);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
+  const { currentUser, logout } = useAuth();
 
   const navItems = [
     { path: '/home', icon: Home, label: 'الرئيسية' },
@@ -120,6 +123,21 @@ const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = f
         </button>
       )}
 
+      {/* User Info */}
+      {currentUser && !collapsed && (
+        <div className="p-3 border-t border-slate-700 mx-2 mt-2">
+          <div className="flex items-center gap-3 p-2 bg-slate-700/50 rounded-lg">
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <User className="w-4 h-4 text-white" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-white text-sm font-medium truncate">{currentUser.name}</p>
+              <p className="text-slate-400 text-xs truncate">{currentUser.role === 'admin' ? 'مدير نظام' : currentUser.role === 'manager' ? 'مدير' : 'مستخدم'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Logout */}
       <div className={`p-2 sm:p-3 border-t border-slate-700 ${collapsed ? 'px-1' : ''}`}>
         <button 
@@ -139,11 +157,12 @@ const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = f
         isOpen={logoutConfirm}
         onClose={() => setLogoutConfirm(false)}
         onConfirm={() => {
+          logout();
           clearAllData();
-          navigate('/');
+          navigate('/login');
         }}
         title="تأكيد تسجيل الخروج"
-        message="هل أنت متأكد من تسجيل الخروج؟ سيتم مسح جميع البيانات المحلية."
+        message="هل أنت متأكد من تسجيل الخروج؟"
         confirmText="تسجيل الخروج"
         cancelText="إلغاء"
         type="warning"

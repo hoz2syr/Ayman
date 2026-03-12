@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, FileDown, Calendar, Filter } from 'lucide-react';
-import { getExpenses, deleteExpense, getProjects, getSettings } from '../utils/storage';
+import { getExpenses, deleteExpense, getProjects, getContractors, getSettings, getCompanyInfo } from '../utils/storage';
 import ExpenseForm from '../components/forms/ExpenseForm';
-import { generateExpensesPDF } from '../utils/pdfGenerator';
+import { generateExpensesPDF } from '../utils/PDFService';
+import { exportExpensesToExcel } from '../utils/exportExcel';
 import { exportToWord } from '../utils/exportWord';
 import DatePicker from '../components/shared/DatePicker';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
@@ -156,7 +157,7 @@ const Expenses = () => {
 
   // Prepare expense data for PDF
   const prepareExpenseData = () => {
-    const companyInfo = getSettings();
+    const companyInfo = getCompanyInfo();
     return {
       expenses: filteredExpenses.map(e => ({
         date: e.date,
@@ -177,44 +178,8 @@ const Expenses = () => {
   // Get company info
   const companyInfo = getSettings();
 
-  const handleExportExcel = async () => {
-    // Export to Excel using xlsx
-    const XLSX = await import('xlsx');
-    
-    // Group by category
-    const grouped = {};
-    filteredExpenses.forEach(e => {
-      const cat = e.category || 'أخرى';
-      if (!grouped[cat]) grouped[cat] = [];
-      grouped[cat].push({
-        'الوصف': e.description,
-        'المشروع': getProjectName(e.projectId),
-        'التاريخ': e.date,
-        'المبلغ (دولار)': e.amountUSD || 0,
-        'المبلغ (ل.س)': e.amountSYP || 0,
-      });
-    });
-
-    const wb = XLSX.utils.book_new();
-    
-    // Create summary sheet
-    const summaryData = [
-      { 'الفئة': 'أجور عمال', 'الإجمالي': totals.wages },
-      { 'الفئة': 'مواد بناء', 'الإجمالي': totals.materials },
-      { 'الفئة': 'معدات', 'الإجمالي': totals.equipment },
-      { 'الفئة': 'تشغيل', 'الإجمالي': totals.operations },
-      { 'الإجمالي الكلي': '', 'الإجمالي': totals.total },
-    ];
-    const wsSummary = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, wsSummary, 'ملخص');
-    
-    // Create detailed sheets
-    Object.entries(grouped).forEach(([cat, data]) => {
-      const ws = XLSX.utils.json_to_sheet(data);
-      XLSX.utils.book_append_sheet(wb, ws, cat);
-    });
-
-    XLSX.writeFile(wb, 'expense_report.xlsx');
+  const handleExportExcel = () => {
+    exportExpensesToExcel(expenses, projects, contractors, projectFilter !== 'all' ? projectFilter : null);
   };
 
   const handleExportPDF = async () => {

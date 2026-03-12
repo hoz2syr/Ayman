@@ -1,10 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building } from 'lucide-react';
+import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building, BarChart3 } from 'lucide-react';
 import { getProjects, getExpenses, getInvoices, getContractors, getCompanyInfo, getUnits, getLeads, getContracts } from '../utils/storage';
+import { ExpensesPieChart, MonthlyExpensesChart, ProjectsBarChart, SalesLineChart } from '../components/shared/Charts';
+import { SkeletonStats } from '../components/shared/Skeleton';
 
 const Home = () => {
   const navigate = useNavigate();
+  const [showCharts, setShowCharts] = useState(false);
   
   const projects = useMemo(() => getProjects(), []);
   const expenses = useMemo(() => getExpenses(), []);
@@ -164,7 +167,7 @@ const Home = () => {
                   </div>
                 ))}
                 {alerts.contracts.length > 3 && (
-                  <p className="text-orange-400 text-xs">و {alerts.contracts.length - 3} 更多...</p>
+                  <p className="text-orange-400 text-xs">و {alerts.contracts.length - 3} المزيد...</p>
                 )}
               </div>
             </div>
@@ -316,6 +319,31 @@ const Home = () => {
             </p>
           )}
         </div>
+      </div>
+
+      {/* Charts Section */}
+      <div className="mt-4">
+        <button
+          onClick={() => setShowCharts(!showCharts)}
+          className="card w-full flex items-center justify-between hover:ring-2 hover:ring-[#3b82f6] transition-all"
+        >
+          <div className="flex items-center gap-3">
+            <BarChart3 className="w-5 h-5 text-[#3b82f6]" />
+            <span className="font-semibold text-white">الرسوم البيانية والإحصائيات</span>
+          </div>
+          <span className={`transform transition-transform ${showCharts ? 'rotate-180' : ''}`}>
+            <TrendingUp className="w-5 h-5 text-slate-400" />
+          </span>
+        </button>
+
+        {showCharts && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 animate-fadeIn">
+            <MonthlyExpensesChart expenses={expenses} />
+            <ExpensesPieChart expenses={expenses} />
+            <ProjectsBarChart projects={projects} />
+            <SalesLineChart contracts={contracts} />
+          </div>
+        )}
       </div>
     </div>
   );

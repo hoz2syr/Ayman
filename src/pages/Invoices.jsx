@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings } from '../utils/storage';
+import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings, getCompanyInfo } from '../utils/storage';
 import InvoiceForm from '../components/forms/InvoiceForm';
-import { generateInvoicePDF } from '../utils/pdfGenerator';
+import { generateInvoicePDF } from '../utils/PDFService';
 import { exportToWord } from '../utils/exportWord';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
@@ -119,7 +119,7 @@ const Invoices = () => {
   };
 
   // Get company info
-  const companyInfo = getSettings();
+  const companyInfo = getCompanyInfo();
 
   const handleExportWord = async (invoice) => {
     const content = generateInvoiceContent(invoice);
