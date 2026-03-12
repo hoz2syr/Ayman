@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--executable-path",
+        "C:\\Users\\hozai\\AppData\\Local\\ms-playwright\\chromium-1208\\chrome-win64\\chrome.exe"
+      ]
+    }
+  }
+}

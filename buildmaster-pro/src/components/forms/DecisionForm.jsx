@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Save, FileDown, FileText, Upload, X, Image } from 'lucide-react';
-import { saveDecision, generateDecisionNumber, getSettings } from '../../utils/storage';
-import { generateDecisionPDF } from '../../utils/pdfGenerator';
+import { saveDecision, generateDecisionNumber, getCompanyInfo } from '../../utils/storage';
+import { generateDecisionPDF } from '../../utils/PDFService';
 import { exportToWord } from '../../utils/exportWord';
 import Modal from '../shared/Modal';
 import DatePicker from '../shared/DatePicker';
@@ -73,7 +73,7 @@ const DecisionForm = ({ projectId, decision = null, projectName = '', onClose, o
 
   // Prepare decision data for PDF
   const prepareDecisionData = () => {
-    const companyInfo = getSettings();
+    const companyInfo = getCompanyInfo();
     return {
       decisionNumber: formData.decisionNumber,
       date: formData.date,

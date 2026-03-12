@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Save, FileDown, FileText, Upload, X, Image } from 'lucide-react';
-import { saveReport, generateReportNumber, getSettings } from '../../utils/storage';
-import { generateReportPDF } from '../../utils/pdfGenerator';
+import { saveReport, generateReportNumber, getCompanyInfo } from '../../utils/storage';
+import { generateReportPDF } from '../../utils/PDFService';
 import { exportToWord } from '../../utils/exportWord';
 import Modal from '../shared/Modal';
 import DatePicker from '../shared/DatePicker';
@@ -72,7 +72,7 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
 
   // Prepare report data for PDF
   const prepareReportData = () => {
-    const companyInfo = getSettings();
+    const companyInfo = getCompanyInfo();
     return {
       reportNumber: formData.reportNumber,
       date: formData.date,
