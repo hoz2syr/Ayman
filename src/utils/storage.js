@@ -469,7 +469,8 @@ export const deleteProject = (id) => {
 // ============================================
 
 export const getDrawings = () => {
-  return getItem(STORAGE_KEYS.DRAWINGS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.DRAWINGS);
 };
 
 export const getDrawingsByProject = (projectId) => {
@@ -497,12 +498,12 @@ export const saveDrawing = (drawing) => {
     drawings.push(newDrawing);
   }
   
-  setItem(STORAGE_KEYS.DRAWINGS, drawings);
+  saveToCache(STORAGE_KEYS.DRAWINGS, drawings);
 };
 
 export const deleteDrawing = (id) => {
   const drawings = getDrawings().filter(d => d.id !== id);
-  setItem(STORAGE_KEYS.DRAWINGS, drawings);
+  saveToCache(STORAGE_KEYS.DRAWINGS, drawings);
 };
 
 // توليد رقم المخطط تلقائياً
@@ -533,7 +534,8 @@ export const getDrawingNumber = () => generateDrawingNumber();
 // ============================================
 
 export const getReports = () => {
-  return getItem(STORAGE_KEYS.REPORTS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.REPORTS);
 };
 
 export const getReportsByProject = (projectId) => {
@@ -561,12 +563,12 @@ export const saveReport = (report) => {
     reports.push(newReport);
   }
   
-  setItem(STORAGE_KEYS.REPORTS, reports);
+  saveToCache(STORAGE_KEYS.REPORTS, reports);
 };
 
 export const deleteReport = (id) => {
   const reports = getReports().filter(r => r.id !== id);
-  setItem(STORAGE_KEYS.REPORTS, reports);
+  saveToCache(STORAGE_KEYS.REPORTS, reports);
 };
 
 const generateReportNumber = () => {
@@ -594,7 +596,8 @@ const generateReportNumber = () => {
 // ============================================
 
 export const getDecisions = () => {
-  return getItem(STORAGE_KEYS.DECISIONS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.DECISIONS);
 };
 
 export const getDecisionsByProject = (projectId) => {
@@ -622,12 +625,12 @@ export const saveDecision = (decision) => {
     decisions.push(newDecision);
   }
   
-  setItem(STORAGE_KEYS.DECISIONS, decisions);
+  saveToCache(STORAGE_KEYS.DECISIONS, decisions);
 };
 
 export const deleteDecision = (id) => {
   const decisions = getDecisions().filter(d => d.id !== id);
-  setItem(STORAGE_KEYS.DECISIONS, decisions);
+  saveToCache(STORAGE_KEYS.DECISIONS, decisions);
 };
 
 const generateDecisionNumber = () => {
@@ -901,7 +904,7 @@ export const addContractorPayment = (contractorId, payment) => {
       newPayment
     ];
     
-    setItem(STORAGE_KEYS.CONTRACTORS, contractors);
+    saveToCache(STORAGE_KEYS.CONTRACTORS, contractors);
     return newPayment;
   }
   return null;
@@ -917,7 +920,8 @@ export const getContractorPayments = (contractorId) => {
 // ============================================
 
 export const getUnits = () => {
-  return getItem(STORAGE_KEYS.UNITS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.UNITS);
 };
 
 export const getUnit = (id) => {
@@ -968,13 +972,13 @@ export const saveUnit = (unit) => {
     units.push(newUnit);
   }
   
-  setItem(STORAGE_KEYS.UNITS, units);
+  saveToCache(STORAGE_KEYS.UNITS, units);
   return unit.id ? unit.id : units[units.length - 1].id;
 };
 
 export const deleteUnit = (id) => {
   const units = getUnits().filter(u => u.id !== id);
-  setItem(STORAGE_KEYS.UNITS, units);
+  saveToCache(STORAGE_KEYS.UNITS, units);
 };
 
 export const updateUnitStatus = (id, status, buyerId = null) => {
@@ -988,7 +992,7 @@ export const updateUnitStatus = (id, status, buyerId = null) => {
       buyerId: buyerId || units[index].buyerId,
       updatedAt: new Date().toISOString() 
     };
-    setItem(STORAGE_KEYS.UNITS, units);
+    saveToCache(STORAGE_KEYS.UNITS, units);
   }
 };
 
@@ -997,7 +1001,8 @@ export const updateUnitStatus = (id, status, buyerId = null) => {
 // ============================================
 
 export const getLeads = () => {
-  return getItem(STORAGE_KEYS.LEADS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.LEADS);
 };
 
 export const getLead = (id) => {
@@ -1033,13 +1038,13 @@ export const saveLead = (lead) => {
     leads.push(newLead);
   }
   
-  setItem(STORAGE_KEYS.LEADS, leads);
+  saveToCache(STORAGE_KEYS.LEADS, leads);
   return lead.id ? lead.id : leads[leads.length - 1].id;
 };
 
 export const deleteLead = (id) => {
   const leads = getLeads().filter(l => l.id !== id);
-  setItem(STORAGE_KEYS.LEADS, leads);
+  saveToCache(STORAGE_KEYS.LEADS, leads);
 };
 
 export const updateLeadStage = (id, stage) => {
@@ -1048,7 +1053,7 @@ export const updateLeadStage = (id, stage) => {
   
   if (index !== -1) {
     leads[index] = { ...leads[index], stage, updatedAt: new Date().toISOString() };
-    setItem(STORAGE_KEYS.LEADS, leads);
+    saveToCache(STORAGE_KEYS.LEADS, leads);
   }
 };
 
@@ -1057,7 +1062,8 @@ export const updateLeadStage = (id, stage) => {
 // ============================================
 
 export const getContracts = () => {
-  return getItem(STORAGE_KEYS.CONTRACTS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.CONTRACTS);
 };
 
 export const getContract = (id) => {
@@ -1106,13 +1112,13 @@ export const saveContract = (contract) => {
     contracts.push(newContract);
   }
   
-  setItem(STORAGE_KEYS.CONTRACTS, contracts);
+  saveToCache(STORAGE_KEYS.CONTRACTS, contracts);
   return contract.id ? contract.id : contracts[contracts.length - 1].id;
 };
 
 export const deleteContract = (id) => {
   const contracts = getContracts().filter(c => c.id !== id);
-  setItem(STORAGE_KEYS.CONTRACTS, contracts);
+  saveToCache(STORAGE_KEYS.CONTRACTS, contracts);
 };
 
 const generateContractNumber = () => {
