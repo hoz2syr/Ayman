@@ -700,6 +700,30 @@ const loadSupabaseCache = async () => {
   }
 };
 
+// Real-time subscription for cross-device sync
+const setupRealtimeSync = () => {
+  if (!isSupabaseConfigured()) return;
+  
+  const tables = ['expenses', 'projects', 'invoices', 'contractors', 'units', 'leads', 'contracts', 'drawings', 'reports', 'decisions', 'settings', 'company_info'];
+  
+  tables.forEach(table => {
+    supabase
+      .channel(`public:${table}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+        console.log('🔄 Real-time update:', table, payload);
+        // Reload cache
+        cacheLoaded = false;
+        loadSupabaseCache();
+      })
+      .subscribe();
+  });
+};
+
+// Initialize real-time sync
+if (typeof window !== 'undefined' && isSupabaseConfigured()) {
+  setupRealtimeSync();
+}
+
 const getFromCache = (key) => {
   if (isSupabaseConfigured() && supabaseCache[key]) {
     return supabaseCache[key];
@@ -1168,6 +1192,13 @@ export const saveSettings = (settings) => {
 // Check if Supabase is configured and syncing
 export const isSyncing = () => isSupabaseConfigured();
 
+// Force reload from Supabase (for manual refresh)
+export const reloadFromSupabase = () => {
+  cacheLoaded = false;
+  loadSupabaseCache();
+  console.log('🔄 Reloading data from Supabase...');
+};
+
 // ============================================
 // Utility Functions
 // ============================================
@@ -1293,4 +1324,5 @@ export default {
   exportAllData,
   importData,
   isSyncing,
+  reloadFromSupabase,
 };

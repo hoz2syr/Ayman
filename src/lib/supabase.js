@@ -12,7 +12,13 @@ console.log('🔍 Supabase Config:', {
 });
 
 export const supabase = isConfigured 
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10
+        }
+      }
+    })
   : null;
 
 export const isSupabaseConfigured = () => isConfigured;
