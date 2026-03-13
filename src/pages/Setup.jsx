@@ -1,10 +1,11 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
-import { setCompanyInfo } from '../utils/storage';
+import { Building2, Upload, Trash2, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { setCompanyInfo, isCompanySetup } from '../utils/storage';
 
 const Setup = () => {
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     commercialRecord: '',
@@ -16,8 +17,27 @@ const Setup = () => {
     stamp: null,
   });
   const [errors, setErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(true);
   const signatureRef = useRef(null);
   const signatureCanvasRef = useRef(null);
+
+  useEffect(() => {
+    if (isCompanySetup()) {
+      navigate('/home');
+    }
+  }, [navigate]);
+
+  useEffect(() => {
+    setIsLoading(false);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#0f172a] to-[#1e293b] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,7 +103,8 @@ const Setup = () => {
       return;
     }
 
-    // Get signature data from canvas if drawn
+    setLoading(true);
+    
     let signatureData = formData.signature;
     if (signatureRef.current && !signatureData) {
       signatureData = signatureRef.current.toDataURL();
@@ -402,9 +423,10 @@ const Setup = () => {
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-[#3b82f6] text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-600 transition-colors mt-6"
+            disabled={loading}
+            className="w-full bg-[#3b82f6] text-white py-4 rounded-lg font-semibold text-lg hover:bg-blue-600 transition-colors mt-6 disabled:opacity-50"
           >
-            ابدأ الاستخدام
+            {loading ? 'جاري الحفظ...' : 'ابدأ الاستخدام'}
           </button>
         </form>
       </div>

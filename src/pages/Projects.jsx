@@ -1,12 +1,16 @@
 import { useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, FileText, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { getProjects, saveProject, deleteProject, getInvoicesByProject, getExpensesByProject } from '../utils/storage';
 import Modal from '../components/shared/Modal';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import DatePicker from '../components/shared/DatePicker';
 import LocationPicker from '../components/shared/LocationPicker';
 import { useToast } from '../components/shared/Toast';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 
 const Projects = () => {
   const { showToast } = useToast();
@@ -15,6 +19,7 @@ const Projects = () => {
   const [editingProject, setEditingProject] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, projectId: null });
   const [refreshKey, setRefreshKey] = useState(0);
+  const [viewMode, setViewMode] = useState('table');
 
   const projects = getProjects();
   const loadProjects = useCallback(() => {
@@ -126,43 +131,137 @@ const Projects = () => {
 
   const statusOptions = ['قيد التنفيذ', 'مكتمل', 'متوقف', 'ملغى'];
 
+  const getStatusBadgeVariant = (status) => {
+    switch (status) {
+      case 'مكتمل': return 'success';
+      case 'قيد التنفيذ': return 'info';
+      case 'متوقف': return 'warning';
+      case 'ملغى': return 'destructive';
+      default: return 'default';
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn" key={refreshKey}>
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
         <div className="relative flex-1 max-w-full sm:max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 z-10" />
           <input
             type="text"
             placeholder="البحث في المشاريع..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="form-input pr-9 md:pr-10 text-sm md:text-base"
+            className="w-full h-10 rounded-lg border border-slate-600 bg-slate-800/50 px-4 pr-10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
           />
         </div>
-        <button 
-          onClick={() => handleOpenModal()}
-          className="btn-primary flex items-center justify-center gap-2 w-full sm:w-auto"
-        >
-          <Plus className="w-5 h-5" />
-          <span className="hidden sm:inline">مشروع جديد</span>
-          <span className="sm:hidden">+</span>
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              title="عرض جدولي"
+            >
+              <TableIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+              title="عرض بطاقات"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">مشروع جديد</span>
+            <span className="sm:hidden">+</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Projects Grid */}
+      {/* Projects View */}
       {filteredProjects.length === 0 ? (
-        <div className="card text-center py-12">
+        <Card variant="default" className="text-center py-12">
           <p className="text-slate-400 mb-4">لا توجد مشاريع بعد</p>
-          <button 
-            onClick={() => handleOpenModal()} 
-            className="btn-primary inline-flex items-center gap-2"
-          >
+          <Button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2">
             <Plus className="w-5 h-5" />
             إضافة مشروع جديد
-          </button>
+          </Button>
+        </Card>
+      ) : viewMode === 'table' ? (
+        /* Data Table View */
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-800">
+              <tr>
+                <th className="text-right p-3 text-sm text-slate-400">اسم المشروع</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الموقع</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">العميل</th>
+                <th className="text-right p-3 text-sm text-slate-400">الحالة</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الميزانية</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">الفواتير</th>
+                <th className="text-center p-3 text-sm text-slate-400">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredProjects.map((project) => {
+                const stats = getProjectStats(project.id);
+                return (
+                  <tr key={project.id} className="border-t border-slate-700 hover:bg-slate-700/30">
+                    <td className="p-3">
+                      <Link to={`/projects/${project.id}`} className="text-white font-medium hover:text-[#3b82f6]">
+                        {project.name}
+                      </Link>
+                    </td>
+                    <td className="p-3 text-slate-300 hidden md:table-cell">{project.location || '-'}</td>
+                    <td className="p-3 text-slate-300 hidden lg:table-cell">{project.clientName || '-'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
+                        {project.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-green-400 hidden md:table-cell">
+                      {parseFloat(project.budget || 0).toLocaleString('ar-SA')} ر.س
+                    </td>
+                    <td className="p-3 text-slate-300 hidden lg:table-cell">
+                      <span className="text-[#3b82f6]">{stats.invoiceCount}</span>
+                      <span className="text-slate-500"> / </span>
+                      <span className="text-[#ef4444]">{stats.totalExpenses.toLocaleString('ar-SA')}</span>
+                    </td>
+                    <td className="p-3">
+                      <div className="flex justify-center gap-1">
+                        <Link
+                          to={`/projects/${project.id}`}
+                          className="p-2 text-blue-500 hover:bg-slate-700 rounded"
+                          title="عرض"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleOpenModal(project)}
+                          className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded"
+                          title="تعديل"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteClick(project.id)}
+                          className="p-2 text-red-500 hover:bg-slate-700 rounded"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       ) : (
+        /* Grid Cards View */
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 md:gap-4">
           {filteredProjects.map((project) => {
             const stats = getProjectStats(project.id);

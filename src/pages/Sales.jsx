@@ -12,8 +12,7 @@ import {
   getContracts, saveContract, deleteContract, getContractNumber,
   getSettings, saveInvoice, getCompanyInfo
 } from '../utils/storage';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import { generateContractPDF } from '../utils/PDFService';
 import { useToast } from '../components/shared/Toast';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 
@@ -40,9 +39,9 @@ const Sales = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: '', id: null });
 
   const projects = useMemo(() => getProjects(), []);
+  const [contracts, setContracts] = useState(() => getContracts());
   const units = useMemo(() => getUnits(), []);
   const leads = useMemo(() => getLeads(), []);
-  const contracts = useMemo(() => getContracts(), []);
   const settings = useMemo(() => getSettings(), []);
   const company = useMemo(() => getCompanyInfo(), []);
 
@@ -89,11 +88,18 @@ const Sales = () => {
     setDeleteConfirm({ isOpen: true, type: 'unit', id });
   };
 
-  const handleDeleteLead = (id) => {
-    setDeleteConfirm({ isOpen: true, type: 'lead', id });
-  };
+   const handleDeleteLead = (id) => {
+     setDeleteConfirm({ isOpen: true, type: 'lead', id });
+   };
 
-  const handleDeleteContract = (id) => {
+   const handleSaveLead = (leadData) => {
+     saveLead(leadData);
+     setShowLeadPanel(false);
+     setEditingLead(null);
+     showToast('تم حفظ المهتم بنجاح', 'success');
+   };
+
+   const handleDeleteContract = (id) => {
     setDeleteConfirm({ isOpen: true, type: 'contract', id });
   };
 
@@ -136,7 +142,8 @@ const Sales = () => {
   };
 
   const handleSaveContract = (contractData) => {
-    const contractId = saveContract(contractData);
+    saveContract(contractData);
+    setContracts(getContracts());
     
     if (contractData.unitId) {
       updateUnitStatus(contractData.unitId, 'sold', contractData.buyerId);
@@ -145,6 +152,7 @@ const Sales = () => {
     setShowContractPanel(false);
     setEditingContract(null);
     setSelectedLeadForContract(null);
+    showToast('تم حفظ العقد بنجاح', 'success');
   };
 
   const handleCreateInvoice = (contract) => {
@@ -184,23 +192,41 @@ const Sales = () => {
   };
 
   const exportContractPDF = async (contract) => {
-    const element = contractRef.current;
-    if (!element) return;
-
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff'
-    });
-
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const pdfWidth = pdf.internal.pageSize.getWidth();
-    const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-    pdf.save(`عقد_${contract.contractNumber}.pdf`);
+    try {
+      const companyInfo = getCompanyInfo();
+      
+      if (!contract) {
+        showToast('بيانات العقد غير موجودة', 'error');
+        return;
+      }
+      
+      const contractData = {
+        contractNumber: contract.contractNumber,
+        contractDate: contract.date,
+        status: contract.status,
+        buyerName: contract.buyerName,
+        buyerId: contract.buyerId,
+        buyerPhone: contract.buyerPhone,
+        buyerEmail: contract.buyerEmail,
+        projectName: contract.projectName,
+        unitNumber: contract.unitNumber,
+        floor: contract.floor,
+        sellingPrice: contract.sellingPrice,
+        downPayment: contract.downPayment,
+        notes: contract.notes,
+      };
+      
+      const result = await generateContractPDF(contractData, companyInfo);
+      
+      if (result?.success) {
+        showToast('تم تصدير العقد بنجاح', 'success');
+      } else {
+        showToast(result?.error || 'حدث خطأ في إنشاء ملف PDF', 'error');
+      }
+    } catch (error) {
+      console.error('Contract PDF Export Error:', error);
+      showToast('حدث خطأ في إنشاء ملف PDF: ' + error.message, 'error');
+    }
   };
 
   const unitTypes = [
@@ -625,6 +651,7 @@ const Sales = () => {
           onSave={handleSaveUnit}
           onClose={() => { setShowUnitPanel(false); setEditingUnit(null); }}
           exchangeRate={exchangeRate}
+          showToast={showToast}
         />
       )}
 
@@ -636,6 +663,7 @@ const Sales = () => {
           units={units}
           onSave={handleSaveLead}
           onClose={() => { setShowLeadPanel(false); setEditingLead(null); }}
+          showToast={showToast}
         />
       )}
 
@@ -651,6 +679,7 @@ const Sales = () => {
           exchangeRate={exchangeRate}
           onSave={handleSaveContract}
           onClose={() => { setShowContractPanel(false); setEditingContract(null); setSelectedLeadForContract(null); }}
+          showToast={showToast}
         />
       )}
 
@@ -700,7 +729,7 @@ const Sales = () => {
 };
 
 // Unit Panel Component
-const UnitPanel = ({ unit, projects, onSave, onClose, exchangeRate }) => {
+const UnitPanel = ({ unit, projects, onSave, onClose, exchangeRate, showToast }) => {
   const [formData, setFormData] = useState({
     id: unit?.id || null,
     unitNumber: unit?.unitNumber || '',
@@ -903,7 +932,7 @@ const UnitPanel = ({ unit, projects, onSave, onClose, exchangeRate }) => {
 };
 
 // Lead Panel Component
-const LeadPanel = ({ lead, projects, units, onSave, onClose }) => {
+const LeadPanel = ({ lead, projects, units, onSave, onClose, showToast }) => {
   const [formData, setFormData] = useState({
     id: lead?.id || null,
     fullName: lead?.fullName || '',
@@ -1100,7 +1129,7 @@ const LeadPanel = ({ lead, projects, units, onSave, onClose }) => {
 };
 
 // Contract Panel Component
-const ContractPanel = ({ contract, selectedLead, leads, units, projects, company, exchangeRate, onSave, onClose }) => {
+const ContractPanel = ({ contract, selectedLead, leads, units, projects, company, exchangeRate, onSave, onClose, showToast }) => {
   const [formData, setFormData] = useState({
     id: contract?.id || null,
     contractNumber: contract?.contractNumber || getContractNumber(),

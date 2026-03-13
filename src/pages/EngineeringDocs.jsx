@@ -23,10 +23,9 @@ import {
   deleteReport,
   saveDecision, 
   deleteDecision,
-  DrawingSchema,
-  ReportSchema,
-  DecisionSchema
+  getCompanyInfo
 } from '../utils/storage';
+import { generateDecisionPDF, generateReportPDF } from '../utils/PDFService';
 import Modal from '../components/shared/Modal';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 
@@ -306,6 +305,39 @@ const EngineeringDocs = () => {
     setViewModal({ isOpen: true, item, type });
   };
 
+  const handleExportDecisionPDF = async (decision) => {
+    const companyInfo = getCompanyInfo();
+    const decisionData = {
+      decisionNumber: decision.decisionNumber,
+      date: decision.date,
+      subject: decision.subject,
+      status: decision.status,
+      responsibleParty: decision.responsibleParty,
+      dueDate: decision.dueDate,
+      projectName: getProjectName(decision.projectId),
+      description: decision.description,
+      decision: decision.decision,
+      notes: decision.notes,
+    };
+    await generateDecisionPDF(decisionData, companyInfo);
+  };
+
+  const handleExportReportPDF = async (report) => {
+    const companyInfo = getCompanyInfo();
+    const reportData = {
+      reportNumber: report.reportNumber,
+      date: report.date,
+      subject: report.subject,
+      status: report.status,
+      engineerName: report.engineer,
+      projectName: getProjectName(report.projectId),
+      description: report.description,
+      recommendations: report.recommendations,
+      notes: report.notes,
+    };
+    await generateReportPDF(reportData, companyInfo);
+  };
+
   const getStatusColor = (status) => {
     switch (status) {
       case 'منفذ': return 'bg-green-500';
@@ -548,6 +580,9 @@ const EngineeringDocs = () => {
                         <td className="p-3 text-slate-400">{report.date || '-'}</td>
                         <td className="p-3">
                           <div className="flex justify-center gap-2">
+                            <button onClick={() => handleExportReportPDF(report)} className="p-2 text-red-500 hover:bg-slate-700 rounded" title="تصدير PDF">
+                              <FileText className="w-4 h-4" />
+                            </button>
                             <button onClick={() => handleViewDocument(report, 'report')} className="p-2 text-blue-500 hover:bg-slate-700 rounded">
                               <FileStack className="w-4 h-4" />
                             </button>
@@ -642,6 +677,9 @@ const EngineeringDocs = () => {
                         </td>
                         <td className="p-3">
                           <div className="flex justify-center gap-2">
+                            <button onClick={() => handleExportDecisionPDF(decision)} className="p-2 text-red-500 hover:bg-slate-700 rounded" title="تصدير PDF">
+                              <FileText className="w-4 h-4" />
+                            </button>
                             <button onClick={() => handleViewDocument(decision, 'decision')} className="p-2 text-blue-500 hover:bg-slate-700 rounded">
                               <FileStack className="w-4 h-4" />
                             </button>

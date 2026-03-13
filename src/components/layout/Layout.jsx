@@ -12,24 +12,22 @@ const Layout = () => {
   useEffect(() => {
     const handleResize = () => {
       const width = window.innerWidth;
-      setIsMobile(width < 768);
-      setIsTablet(width >= 768 && width < 1024);
+      const mobile = width < 768;
+      const tablet = width >= 768 && width < 1024;
+      
+      setIsMobile(mobile);
+      setIsTablet(tablet);
       
       // Auto-close sidebar on mobile/tablet
-      if (width < 1024) {
+      if (mobile || tablet) {
         setSidebarOpen(false);
-      }
-      
-      // Auto-collapse sidebar on large screens if user previously collapsed it
-      if (width >= 1280 && sidebarCollapsed) {
-        setSidebarCollapsed(false);
       }
     };
 
     handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [sidebarCollapsed]);
+  }, []);
 
   // Prevent body scroll when sidebar is open on mobile
   useEffect(() => {
@@ -57,12 +55,14 @@ const Layout = () => {
 
   const sidebarWidth = sidebarCollapsed ? 'w-[72px] min-w-[72px]' : 'w-[260px] min-w-[260px]';
 
+  const isMobileOrTablet = isMobile || isTablet;
+
   return (
     <div className="flex h-screen bg-[#0f172a] overflow-hidden" dir="rtl">
       {/* Mobile/Tablet Overlay */}
-      {(sidebarOpen && (isMobile || isTablet)) && (
+      {sidebarOpen && isMobileOrTablet && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm"
+          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
           onClick={handleCloseSidebar}
           style={{ touchAction: 'none' }}
         />
@@ -70,17 +70,17 @@ const Layout = () => {
 
       {/* Sidebar */}
       <div className={`
-        fixed md:relative z-50 h-full transition-all duration-300 ease-in-out flex-shrink-0
-        ${isMobile || isTablet 
-          ? `w-[280px] ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}` 
-          : `${sidebarWidth} ${sidebarCollapsed ? 'lg:w-[72px] lg:min-w-[72px]' : ''}`
+        h-full transition-all duration-300 ease-in-out flex-shrink-0
+        ${isMobileOrTablet 
+          ? `fixed top-0 z-50 w-[280px] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} ${isMobileOrTablet && 'start-0'}`
+          : `relative ${sidebarWidth}`
         }
       `}>
         <Sidebar 
           onNavigate={handleCloseSidebar} 
-          collapsed={sidebarCollapsed && !isMobile && !isTablet}
+          collapsed={!isMobileOrTablet && sidebarCollapsed}
           onToggleCollapse={handleSidebarToggle}
-          isMobile={isMobile || isTablet}
+          isMobile={isMobileOrTablet}
         />
       </div>
 
@@ -89,8 +89,9 @@ const Layout = () => {
         {/* Header */}
         <Header 
           onMenuClick={handleSidebarToggle}
-          onCollapseClick={!isMobile && !isTablet ? handleSidebarToggle : undefined}
-          isCollapsed={sidebarCollapsed && !isMobile && !isTablet}
+          onCollapseClick={!isMobileOrTablet ? handleSidebarToggle : undefined}
+          isCollapsed={!isMobileOrTablet && sidebarCollapsed}
+          isMobile={isMobileOrTablet}
         />
 
         {/* Page Content */}

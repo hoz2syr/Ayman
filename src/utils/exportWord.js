@@ -1,47 +1,15 @@
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, HeightRule, ImageRun, ShadingType } from 'docx';
-import { getCompanyInfo, getSettings } from './storage';
+import { Document, Packer, Paragraph, TextRun, AlignmentType, Table, TableRow, TableCell, WidthType, HeightRule, ImageRun } from 'docx';
+import { getCompanyInfo } from './storage';
+import { downloadBlob } from './downloadUtils';
 import QRCode from 'qrcode';
+import { formatDate, validateExportData, getExportErrorMessage } from './exportUtils';
 
 /**
- * الحصول على سعر الصرف
+ * توليد QR Code كـ buffer مع معالجة failures
+ * @param {string} url - رابط QR
+ * @returns {Promise<Uint8Array|null>} QR buffer أو null عند الفشل
  */
-const getExchangeRate = () => {
-  try {
-    const settings = getSettings();
-    return settings?.exchangeRateUSD || 13000;
-  } catch {
-    return 13000;
-  }
-};
-
-/**
- * تحويل سعر USD إلى SYP
- */
-const toSYP = (usdAmount) => {
-  const rate = getExchangeRate();
-  return (parseFloat(usdAmount) || 0) * rate;
-};
-
-/**
- * تنسيق التاريخ بالعربية
- */
-const formatDate = (date) => {
-  if (!date) return new Date().toLocaleDateString('ar-SA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-  return new Date(date).toLocaleDateString('ar-SA', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  });
-};
-
-/**
- * توليد QR Code كـ base64
- */
-const generateQRCode = async (url) => {
+const generateQRBuffer = async (url) => {
   try {
     const qrDataUrl = await QRCode.toDataURL(url, {
       width: 100,
@@ -51,16 +19,15 @@ const generateQRCode = async (url) => {
         light: '#ffffff'
       }
     });
-    // تحويل data URL إلى buffer
     const base64Data = qrDataUrl.split(',')[1];
     const binaryString = atob(base64Data);
     const bytes = new Uint8Array(binaryString.length);
     for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
+      bytes[i] = binaryString.codePointAt(i);
     }
-    return Buffer.from(bytes);
+    return bytes;
   } catch (error) {
-    console.error('Error generating QR code:', error);
+    console.warn('QR generation failed, continuing without QR:', error.message);
     return null;
   }
 };
@@ -71,26 +38,28 @@ const generateQRCode = async (url) => {
  */
 export const createWordDocument = async (data) => {
   const companyInfo = getCompanyInfo();
-  const exchangeRate = getExchangeRate();
   
   const children = [];
   
   // === الترويسة ===
-  // توليد QR Code
+  // توليد QR Code - يستمر حتى لو فشل
   const docType = data.docType || 'document';
   const docNumber = data.docNumber || '---';
-  const qrUrl = `${window?.location?.origin || ''}/view/${docType}/${docNumber}`;
-  const qrBuffer = await generateQRCode(qrUrl);
+  const baseUrl = typeof globalThis.window !== 'undefined' ? globalThis.window.location.origin : '';
+  const qrUrl = `${baseUrl}/view/${docType}/${docNumber}`;
+  const qrBuffer = await generateQRBuffer(qrUrl);
   
-  // تحويل شعار الشركة إلى buffer إذا وُجد
+  // تحويل شعار الشركة إلى buffer إذا وُجد - يستمر حتى لو فشل
   let logoBuffer = null;
   if (companyInfo?.logo) {
     try {
       const logoResponse = await fetch(companyInfo.logo);
-      const logoBlob = await logoResponse.arrayBuffer();
-      logoBuffer = Buffer.from(logoBlob);
+      if (logoResponse.ok) {
+        const logoBlob = await logoResponse.arrayBuffer();
+        logoBuffer = new Uint8Array(logoBlob);
+      }
     } catch (e) {
-      console.error('Error loading logo:', e);
+      console.warn('Logo loading failed, using default:', e.message);
     }
   }
   
@@ -345,7 +314,12 @@ export const createWordDocument = async (data) => {
       
       for (const row of tableRows) {
         rowIndex++;
-        const bgColor = isTotalRow ? '1e3a5f' : (rowIndex % 2 === 0 ? 'f8fafc' : 'ffffff');
+        let bgColor;
+        if (isTotalRow) {
+          bgColor = '1e3a5f';
+        } else {
+          bgColor = rowIndex % 2 === 0 ? 'f8fafc' : 'ffffff';
+        }
         const textColor = isTotalRow ? 'ffffff' : '000000';
         
         const rowCells = row.map(cell => 
@@ -379,8 +353,7 @@ export const createWordDocument = async (data) => {
         width: { size: 100, type: WidthType.PERCENTAGE },
       });
       
-      children.push(table);
-      children.push(new Paragraph({ spacing: { after: 300 } }));
+      children.push(table, new Paragraph({ spacing: { after: 300 } }));
     }
     
     // محتوى نصي (key-value)
@@ -501,6 +474,11 @@ export const createWordDocument = async (data) => {
  */
 export const exportToWord = async (data, filename = 'document', docType = 'document') => {
   try {
+    const validation = validateExportData(data, 'بيانات الوثيقة');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+    
     const docData = {
       ...data,
       docType,
@@ -511,19 +489,11 @@ export const exportToWord = async (data, filename = 'document', docType = 'docum
     
     const blob = await Packer.toBlob(doc);
     
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}.docx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, `${filename}.docx`);
     
     return { success: true };
   } catch (error) {
-    console.error('Error exporting to Word:', error);
-    throw error;
+    return { success: false, error: getExportErrorMessage('تصدير الملف', error) };
   }
 };
 

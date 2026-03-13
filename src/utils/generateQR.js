@@ -8,7 +8,7 @@ import QRCode from 'qrcode';
  */
 export async function generateQRBase64(docType, docNumber) {
   try {
-    const baseUrl = window.location.origin;
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
     const url = `${baseUrl}/view/${docType}/${docNumber}`;
     
     const qrBase64 = await QRCode.toDataURL(url, {

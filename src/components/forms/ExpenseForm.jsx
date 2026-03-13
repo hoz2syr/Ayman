@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
-import { saveExpense } from '../../utils/storage';
+import { saveExpense, getSettings } from '../../utils/storage';
 import Modal from '../../components/shared/Modal';
 import DatePicker from '../../components/shared/DatePicker';
 
@@ -12,6 +12,8 @@ import DatePicker from '../../components/shared/DatePicker';
  * @param {function} onSave - دالة الحفظ
  */
 const ExpenseForm = ({ expense = null, projects = [], onClose, onSave }) => {
+  const defaultExchangeRate = getSettings()?.exchangeRateUSD || 13000;
+  
   const [formData, setFormData] = useState({
     category: expense?.category || 'مواد بناء',
     projectId: expense?.projectId || '',
@@ -19,6 +21,7 @@ const ExpenseForm = ({ expense = null, projects = [], onClose, onSave }) => {
     description: expense?.description || '',
     amountUSD: expense?.amountUSD || 0,
     amountSYP: expense?.amountSYP || 0,
+    exchangeRate: expense?.exchangeRate || defaultExchangeRate,
     notes: expense?.notes || '',
     // أجور عمال
     workerName: expense?.workerName || '',
@@ -92,6 +95,7 @@ const ExpenseForm = ({ expense = null, projects = [], onClose, onSave }) => {
       description: formData.description,
       amountUSD: parseFloat(formData.amountUSD) || 0,
       amountSYP: parseFloat(formData.amountSYP) || 0,
+      exchangeRate: parseFloat(formData.exchangeRate) || 13000,
       notes: formData.notes,
       amount: (parseFloat(formData.amountUSD) || 0) + ((parseFloat(formData.amountSYP) || 0) / 13000), // Convert to USD for total
     };
@@ -393,6 +397,20 @@ const ExpenseForm = ({ expense = null, projects = [], onClose, onSave }) => {
               placeholder="0"
             />
           </div>
+        </div>
+
+        {/* Exchange Rate */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">سعر الصرف (د.أ → ل.س)</label>
+          <input
+            type="number"
+            min="0"
+            step="100"
+            value={formData.exchangeRate}
+            onChange={(e) => handleChange('exchangeRate', e.target.value)}
+            className="form-input"
+            placeholder="مثال: 13000"
+          />
         </div>
 
         {/* Calculated Total Display */}

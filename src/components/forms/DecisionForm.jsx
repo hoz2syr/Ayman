@@ -14,6 +14,7 @@ import DatePicker from '../shared/DatePicker';
  * @param {function} onSave - دالة الحفظ
  */
 const DecisionForm = ({ projectId, decision = null, projectName = '', onClose, onSave }) => {
+  const companyInfo = getCompanyInfo();
   const [showPreview, setShowPreview] = useState(false);
   const [loading, setLoading] = useState(false);
   
@@ -70,26 +71,6 @@ const DecisionForm = ({ projectId, decision = null, projectName = '', onClose, o
     if (onSave) onSave();
     if (onClose) onClose();
   };
-
-  // Prepare decision data for PDF
-  const prepareDecisionData = () => {
-    const companyInfo = getCompanyInfo();
-    return {
-      decisionNumber: formData.decisionNumber,
-      date: formData.date,
-      type: formData.subject,
-      status: decision?.status || 'جديد',
-      responsibleParty: formData.responsibleParty,
-      responseDate: formData.deadline,
-      problemDescription: formData.problemDescription,
-      decision: formData.decision,
-      recommendations: formData.notes,
-      projectName,
-      company: companyInfo,
-    };
-  };
-
-  const companyInfo = getSettings();
 
   const handleExportWord = async () => {
     setLoading(true);

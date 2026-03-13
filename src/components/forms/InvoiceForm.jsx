@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Save, Plus, Trash2 } from 'lucide-react';
-import { saveInvoice } from '../../utils/storage';
+import { saveInvoice, getSettings } from '../../utils/storage';
 import Modal from '../../components/shared/Modal';
 import DatePicker from '../../components/shared/DatePicker';
 
@@ -13,6 +13,8 @@ import DatePicker from '../../components/shared/DatePicker';
  * @param {function} onSave - دالة الحفظ
  */
 const InvoiceForm = ({ invoice = null, projects = [], contractors = [], onClose, onSave }) => {
+  const defaultExchangeRate = getSettings()?.exchangeRateUSD || 13000;
+  
   const [formData, setFormData] = useState({
     invoiceNumber: invoice?.invoiceNumber || '',
     projectId: invoice?.projectId || '',
@@ -25,6 +27,7 @@ const InvoiceForm = ({ invoice = null, projects = [], contractors = [], onClose,
     dueDate: invoice?.dueDate || '',
     status: invoice?.status || 'مفتوح',
     taxRate: invoice?.taxRate || 15,
+    exchangeRate: invoice?.exchangeRate || defaultExchangeRate,
     paymentTerms: invoice?.paymentTerms || 'دفع فوري',
     notes: invoice?.notes || '',
     items: invoice?.items || [
@@ -105,6 +108,7 @@ const InvoiceForm = ({ invoice = null, projects = [], contractors = [], onClose,
       dueDate: formData.dueDate,
       status: formData.status,
       taxRate: parseFloat(formData.taxRate),
+      exchangeRate: parseFloat(formData.exchangeRate) || 13000,
       paymentTerms: formData.paymentTerms,
       notes: formData.notes,
       items: formData.items.map(item => ({
@@ -378,7 +382,7 @@ const InvoiceForm = ({ invoice = null, projects = [], contractors = [], onClose,
           </div>
         </div>
 
-        {/* Tax & Payment Terms */}
+        {/* Tax & Exchange Rate */}
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm text-slate-400 mb-1">نسبة الضريبة (%)</label>
@@ -392,17 +396,31 @@ const InvoiceForm = ({ invoice = null, projects = [], contractors = [], onClose,
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">شروط الدفع</label>
-            <select
-              value={formData.paymentTerms}
-              onChange={(e) => handleChange('paymentTerms', e.target.value)}
+            <label className="block text-sm text-slate-400 mb-1">سعر الصرف (د.أ → ل.س)</label>
+            <input
+              type="number"
+              min="0"
+              step="100"
+              value={formData.exchangeRate}
+              onChange={(e) => handleChange('exchangeRate', e.target.value)}
               className="form-input"
-            >
-              {paymentTermsOptions.map(opt => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              placeholder="مثال: 13000"
+            />
           </div>
+        </div>
+
+        {/* Payment Terms */}
+        <div>
+          <label className="block text-sm text-slate-400 mb-1">شروط الدفع</label>
+          <select
+            value={formData.paymentTerms}
+            onChange={(e) => handleChange('paymentTerms', e.target.value)}
+            className="form-input"
+          >
+            {paymentTermsOptions.map(opt => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
         </div>
 
         {/* Notes */}

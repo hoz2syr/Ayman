@@ -41,7 +41,12 @@ export const AuthProvider = ({ children }) => {
     }
     
     const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    const user = allUsers.find(u => u.username === username && u.password === password);
+    let user = allUsers.find(u => u.username === username && u.password === password);
+    
+    // إذا لم يجد المستخدم، استخدم المستخدم الافتراضي مع كلمة مرور التطبيق
+    if (!user && username === 'admin') {
+      user = defaultUsers[0];
+    }
     
     if (user) {
       const { password: _, ...userWithoutPassword } = user;

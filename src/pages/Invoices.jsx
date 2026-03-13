@@ -6,6 +6,9 @@ import { generateInvoicePDF } from '../utils/PDFService';
 import { exportToWord } from '../utils/exportWord';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 
 const Invoices = () => {
   const { showToast } = useToast();
@@ -99,7 +102,8 @@ const Invoices = () => {
 
   // Prepare invoice data for PDF
   const prepareInvoiceData = (invoice) => {
-    const exchangeRate = getSettings()?.exchangeRateUSD || 13000;
+    // Use per-invoice exchange rate, fallback to global setting
+    const exchangeRate = invoice.exchangeRate || getSettings()?.exchangeRateUSD || 13000;
     const project = projects.find(p => p.id === invoice.projectId);
     
     return {
@@ -129,16 +133,22 @@ const Invoices = () => {
   };
 
   const handleExportPDF = async (invoice) => {
-    const invoiceData = prepareInvoiceData(invoice);
-    const result = await generateInvoicePDF(invoiceData, companyInfo);
-    
-    if (!result) {
+    try {
+      const invoiceData = prepareInvoiceData(invoice);
+      const result = await generateInvoicePDF(invoiceData, companyInfo);
+      
+      if (!result?.success) {
+        showToast(result?.error || 'حدث خطأ في إنشاء ملف PDF', 'error');
+      }
+    } catch (error) {
       showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+      console.error('PDF Export Error:', error);
     }
   };
 
   const generateInvoiceContent = (invoice) => {
-    const exchangeRate = getSettings()?.exchangeRateUSD || 13000;
+    // Use per-invoice exchange rate, fallback to global setting
+    const exchangeRate = invoice.exchangeRate || getSettings()?.exchangeRateUSD || 13000;
     
     return {
       title: `فاتورة رقم ${invoice.invoiceNumber}`,

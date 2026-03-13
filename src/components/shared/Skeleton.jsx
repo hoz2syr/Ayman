@@ -1,4 +1,4 @@
-import React from 'react';
+// Skeleton components for loading states
 
 const SkeletonCard = ({ className = '' }) => (
   <div className={`card animate-pulse ${className}`}>

@@ -1,7 +1,60 @@
 // ============================================
 // Miftah - نظام إدارة مشاريع البناء (BuildMaster Pro)
-// أدوات التخزين المحلية
+// أدوات التخزين المحلية + Supabase
 // ============================================
+
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+
+// Check if Supabase is configured
+const useSupabase = isSupabaseConfigured();
+
+// Supabase table mapping
+const SUPABASE_TABLES = {
+  'buildmaster_company_info': 'company_info',
+  'buildmaster_projects': 'projects',
+  'buildmaster_drawings': 'drawings',
+  'buildmaster_reports': 'reports',
+  'buildmaster_decisions': 'decisions',
+  'buildmaster_expenses': 'expenses',
+  'buildmaster_invoices': 'invoices',
+  'buildmaster_contractors': 'contractors',
+  'buildmaster_settings': 'settings',
+  'buildmaster_units': 'units',
+  'buildmaster_leads': 'leads',
+  'buildmaster_contracts': 'contracts',
+};
+
+// Generic Supabase functions
+const supabaseGet = async (localKey) => {
+  if (!useSupabase) return null;
+  const table = SUPABASE_TABLES[localKey];
+  if (!table) return null;
+  
+  const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error(`Supabase get error for ${localKey}:`, error);
+    return null;
+  }
+  return data;
+};
+
+const supabaseSave = async (localKey, items) => {
+  if (!useSupabase) return false;
+  const table = SUPABASE_TABLES[localKey];
+  if (!table) return false;
+  
+  // Delete existing and insert new
+  await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  
+  if (items && items.length > 0) {
+    const { error } = await supabase.from(table).insert(items);
+    if (error) {
+      console.error(`Supabase save error for ${localKey}:`, error);
+      return false;
+    }
+  }
+  return true;
+};
 
 const STORAGE_KEYS = {
   // بيانات الشركة
@@ -61,6 +114,8 @@ export const CompanySchema = {
   email: '',
   address: '',
   logo: null,
+  signature: null,
+  stamp: null,
   taxNumber: '',
   commercialRecord: '',
   createdAt: null,
@@ -337,19 +392,32 @@ export const removeItem = (key) => {
 // ============================================
 
 export const getCompanyInfo = () => {
-  return getItem(STORAGE_KEYS.COMPANY_INFO) || { ...CompanySchema };
+  loadSupabaseCache();
+  const data = getFromCache(STORAGE_KEYS.COMPANY_INFO);
+  return data[0] || getItem(STORAGE_KEYS.COMPANY_INFO) || { ...CompanySchema };
 };
 
 export const setCompanyInfo = (companyInfo) => {
-  return setItem(STORAGE_KEYS.COMPANY_INFO, {
+  const data = {
     ...companyInfo,
     createdAt: companyInfo.createdAt || new Date().toISOString(),
-  });
+  };
+  setItem(STORAGE_KEYS.COMPANY_INFO, data);
+  
+  // Also sync to Supabase
+  if (useSupabase) {
+    supabase.from('company_info').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {
+      supabase.from('company_info').insert(data).then(({ error }) => {
+        if (error) console.error('Error syncing company to Supabase:', error);
+        else console.log('✅ Company info synced to Supabase');
+      });
+    });
+  }
 };
 
 export const isCompanySetup = () => {
   const company = getCompanyInfo();
-  return !!(company && company.name && company.name.trim() !== '');
+  return !!(company?.name?.trim() !== '');
 };
 
 // ============================================
@@ -357,7 +425,8 @@ export const isCompanySetup = () => {
 // ============================================
 
 export const getProjects = () => {
-  return getItem(STORAGE_KEYS.PROJECTS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.PROJECTS);
 };
 
 export const getProject = (id) => {
@@ -386,13 +455,13 @@ export const saveProject = (project) => {
     projects.push(newProject);
   }
   
-  setItem(STORAGE_KEYS.PROJECTS, projects);
+  saveToCache(STORAGE_KEYS.PROJECTS, projects);
   return project.id ? project.id : projects[projects.length - 1].id;
 };
 
 export const deleteProject = (id) => {
   const projects = getProjects().filter(p => p.id !== id);
-  setItem(STORAGE_KEYS.PROJECTS, projects);
+  saveToCache(STORAGE_KEYS.PROJECTS, projects);
 };
 
 // ============================================
@@ -448,7 +517,7 @@ const generateDrawingNumber = () => {
   yearDrawings.forEach(d => {
     const match = d.drawingNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -511,7 +580,7 @@ const generateReportNumber = () => {
   yearReports.forEach(r => {
     const match = r.reportNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -572,7 +641,7 @@ const generateDecisionNumber = () => {
   yearDecisions.forEach(d => {
     const match = d.decisionNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -585,8 +654,84 @@ const generateDecisionNumber = () => {
 // Expenses Functions
 // ============================================
 
+// Cache for Supabase data
+let supabaseCache = {};
+let cacheLoaded = false;
+
+const loadSupabaseCache = async () => {
+  if (!useSupabase || cacheLoaded) return;
+  
+  try {
+    const [companyInfo, projects, expenses, invoices, contractors, settings, units, leads, contracts, drawings, reports, decisions] = await Promise.all([
+      supabase.from('company_info').select('*').limit(1).single(),
+      supabase.from('projects').select('*').order('created_at', { ascending: false }),
+      supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+      supabase.from('invoices').select('*').order('created_at', { ascending: false }),
+      supabase.from('contractors').select('*').order('created_at', { ascending: false }),
+      supabase.from('settings').select('*').limit(1).single(),
+      supabase.from('units').select('*').order('created_at', { ascending: false }),
+      supabase.from('leads').select('*').order('created_at', { ascending: false }),
+      supabase.from('contracts').select('*').order('created_at', { ascending: false }),
+      supabase.from('drawings').select('*').order('created_at', { ascending: false }),
+      supabase.from('reports').select('*').order('created_at', { ascending: false }),
+      supabase.from('decisions').select('*').order('created_at', { ascending: false }),
+    ]);
+
+    supabaseCache = {
+      company_info: companyInfo.data ? [companyInfo.data] : [],
+      projects: projects.data || [],
+      expenses: expenses.data || [],
+      invoices: invoices.data || [],
+      contractors: contractors.data || [],
+      settings: settings.data ? [settings.data] : [],
+      units: units.data || [],
+      leads: leads.data || [],
+      contracts: contracts.data || [],
+      drawings: drawings.data || [],
+      reports: reports.data || [],
+      decisions: decisions.data || [],
+    };
+    cacheLoaded = true;
+    console.log('✅ Supabase cache loaded');
+  } catch (error) {
+    console.error('Error loading Supabase cache:', error);
+  }
+};
+
+const getFromCache = (key) => {
+  if (useSupabase && supabaseCache[key]) {
+    return supabaseCache[key];
+  }
+  return getItem(key) || [];
+};
+
+const saveToCache = (key, data) => {
+  // Always save to localStorage
+  setItem(key, data);
+  
+  // Also save to Supabase if configured
+  if (useSupabase) {
+    const table = SUPABASE_TABLES[key];
+    if (table && data.length > 0) {
+      // Clear and re-insert
+      supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {
+        const dataToInsert = data.map(item => ({
+          ...item,
+          created_at: item.createdAt || item.created_at || new Date().toISOString(),
+          updated_at: item.updatedAt || new Date().toISOString(),
+        }));
+        supabase.from(table).insert(dataToInsert).then(({ error }) => {
+          if (error) console.error(`Error syncing to Supabase (${table}):`, error);
+          else console.log(`✅ Synced to Supabase: ${table}`);
+        });
+      });
+    }
+  }
+};
+
 export const getExpenses = () => {
-  return getItem(STORAGE_KEYS.EXPENSES) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.EXPENSES);
 };
 
 export const getExpense = (id) => {
@@ -620,12 +765,12 @@ export const saveExpense = (expense) => {
     expenses.push(newExpense);
   }
   
-  setItem(STORAGE_KEYS.EXPENSES, expenses);
+  saveToCache(STORAGE_KEYS.EXPENSES, expenses);
 };
 
 export const deleteExpense = (id) => {
   const expenses = getExpenses().filter(e => e.id !== id);
-  setItem(STORAGE_KEYS.EXPENSES, expenses);
+  saveToCache(STORAGE_KEYS.EXPENSES, expenses);
 };
 
 // ============================================
@@ -633,7 +778,8 @@ export const deleteExpense = (id) => {
 // ============================================
 
 export const getInvoices = () => {
-  return getItem(STORAGE_KEYS.INVOICES) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.INVOICES);
 };
 
 export const getInvoice = (id) => {
@@ -668,12 +814,12 @@ export const saveInvoice = (invoice) => {
     invoices.push(newInvoice);
   }
   
-  setItem(STORAGE_KEYS.INVOICES, invoices);
+  saveToCache(STORAGE_KEYS.INVOICES, invoices);
 };
 
 export const deleteInvoice = (id) => {
   const invoices = getInvoices().filter(i => i.id !== id);
-  setItem(STORAGE_KEYS.INVOICES, invoices);
+  saveToCache(STORAGE_KEYS.INVOICES, invoices);
 };
 
 const generateInvoiceNumber = () => {
@@ -687,7 +833,7 @@ const generateInvoiceNumber = () => {
   yearInvoices.forEach(i => {
     const match = i.invoiceNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -701,7 +847,8 @@ const generateInvoiceNumber = () => {
 // ============================================
 
 export const getContractors = () => {
-  return getItem(STORAGE_KEYS.CONTRACTORS) || [];
+  loadSupabaseCache();
+  return getFromCache(STORAGE_KEYS.CONTRACTORS);
 };
 
 export const getContractor = (id) => {
@@ -730,12 +877,12 @@ export const saveContractor = (contractor) => {
     contractors.push(newContractor);
   }
   
-  setItem(STORAGE_KEYS.CONTRACTORS, contractors);
+  saveToCache(STORAGE_KEYS.CONTRACTORS, contractors);
 };
 
 export const deleteContractor = (id) => {
   const contractors = getContractors().filter(c => c.id !== id);
-  setItem(STORAGE_KEYS.CONTRACTORS, contractors);
+  saveToCache(STORAGE_KEYS.CONTRACTORS, contractors);
 };
 
 export const addContractorPayment = (contractorId, payment) => {
@@ -796,9 +943,9 @@ export const saveUnit = (unit) => {
   
   const validatedUnit = {
     ...unit,
-    priceUSD: parseFloat(unit.priceUSD) || 0,
-    priceSYP: (parseFloat(unit.priceUSD) || 0) * exchangeRate,
-    area: parseFloat(unit.area) || 0,
+    priceUSD: Number.parseFloat(unit.priceUSD) || 0,
+    priceSYP: (Number.parseFloat(unit.priceUSD) || 0) * exchangeRate,
+    area: Number.parseFloat(unit.area) || 0,
   };
   
   if (unit.id) {
@@ -978,7 +1125,7 @@ const generateContractNumber = () => {
   yearContracts.forEach(c => {
     const match = c.contractNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -994,12 +1141,27 @@ export const getContractNumber = () => generateContractNumber();
 // ============================================
 
 export const getSettings = () => {
-  return getItem(STORAGE_KEYS.SETTINGS) || { ...SettingsSchema };
+  loadSupabaseCache();
+  const data = getFromCache(STORAGE_KEYS.SETTINGS);
+  return data[0] || getItem(STORAGE_KEYS.SETTINGS) || { ...SettingsSchema };
 };
 
 export const saveSettings = (settings) => {
-  return setItem(STORAGE_KEYS.SETTINGS, settings);
+  setItem(STORAGE_KEYS.SETTINGS, settings);
+  
+  // Also sync to Supabase
+  if (useSupabase) {
+    supabase.from('settings').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {
+      supabase.from('settings').insert(settings).then(({ error }) => {
+        if (error) console.error('Error syncing settings to Supabase:', error);
+        else console.log('✅ Settings synced to Supabase');
+      });
+    });
+  }
 };
+
+// Check if Supabase is configured and syncing
+export const isSyncing = () => useSupabase;
 
 // ============================================
 // Utility Functions
@@ -1010,6 +1172,16 @@ export const clearAllData = () => {
   Object.values(STORAGE_KEYS).forEach(key => {
     localStorage.removeItem(key);
   });
+  
+  // Also clear Supabase
+  if (useSupabase) {
+    const tables = Object.values(SUPABASE_TABLES);
+    tables.forEach(table => {
+      supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    });
+  }
+  supabaseCache = {};
+  cacheLoaded = false;
 };
 
 // تصدير البيانات
@@ -1035,7 +1207,7 @@ export const importData = (data) => {
 // ============================================
 
 export const generateViewUrl = (docType, docNumber) => {
-  const baseUrl = window.location.origin;
+  const baseUrl = globalThis.location.origin;
   return `${baseUrl}/view/${docType}/${docNumber}`;
 };
 
@@ -1115,4 +1287,5 @@ export default {
   clearAllData,
   exportAllData,
   importData,
+  isSyncing,
 };

@@ -1,13 +1,16 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, FileDown, Calendar, Filter } from 'lucide-react';
-import { getExpenses, deleteExpense, getProjects, getContractors, getSettings, getCompanyInfo } from '../utils/storage';
+import { getExpenses, deleteExpense, getProjects, getContractors, getCompanyInfo } from '../utils/storage';
 import ExpenseForm from '../components/forms/ExpenseForm';
 import { generateExpensesPDF } from '../utils/PDFService';
 import { exportExpensesToExcel } from '../utils/exportExcel';
-import { exportToWord } from '../utils/exportWord';
 import DatePicker from '../components/shared/DatePicker';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
+import { StatCard } from '../components/ui/StatCard';
 
 const Expenses = () => {
   const { showToast } = useToast();
@@ -28,6 +31,7 @@ const Expenses = () => {
   
   const expenses = getExpenses();
   const projects = getProjects();
+  const contractors = getContractors();
 
   // Calculate totals by category
   const totals = useMemo(() => {
@@ -157,16 +161,23 @@ const Expenses = () => {
 
   // Prepare expense data for PDF
   const prepareExpenseData = () => {
-    const companyInfo = getCompanyInfo();
+    const expenseList = filteredExpenses.map(e => ({
+      date: e.date,
+      description: e.description,
+      category: e.category,
+      projectName: getProjectName(e.projectId),
+      amount: Number.parseFloat(e.amountUSD) || 0,
+      exchangeRate: e.exchangeRate || getSettings()?.exchangeRateUSD || 13000,
+    }));
+    
+    // Get the most common exchange rate or use the first one
+    const exchangeRates = expenseList.map(e => e.exchangeRate).filter(Boolean);
+    const defaultExchangeRate = exchangeRates.length > 0 ? exchangeRates[0] : (getSettings()?.exchangeRateUSD || 13000);
+    
     return {
-      expenses: filteredExpenses.map(e => ({
-        date: e.date,
-        description: e.description,
-        category: e.category,
-        projectName: getProjectName(e.projectId),
-        amount: e.amountUSD || 0,
-      })),
+      expenses: expenseList,
       totals,
+      exchangeRate: defaultExchangeRate,
       projectName: projectFilter !== 'all' ? getProjectName(projectFilter) : null,
       dateRange: startDate && endDate ? `${startDate} - ${endDate}` : 
                  dateFilter !== 'all' ? 
@@ -176,26 +187,50 @@ const Expenses = () => {
   };
 
   // Get company info
-  const companyInfo = getSettings();
+  const companyInfo = getCompanyInfo();
 
   const handleExportExcel = () => {
     exportExpensesToExcel(expenses, projects, contractors, projectFilter !== 'all' ? projectFilter : null);
   };
 
   const handleExportPDF = async () => {
-    const expenseData = prepareExpenseData();
-    const expensesWithProject = expenseData.expenses.map(e => ({
-      ...e,
-      projectName: getProjectName(filteredExpenses.find(fe => fe.description === e.description && fe.date === e.date)?.projectId),
-    }));
-    
-    const result = await generateExpensesPDF(expensesWithProject, companyInfo, {
-      projectName: expenseData.projectName,
-      dateRange: expenseData.dateRange,
-    });
-    
-    if (!result) {
-      showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+    try {
+      const expenseData = prepareExpenseData();
+      
+      if (!expenseData.expenses || expenseData.expenses.length === 0) {
+        showToast('لا توجد مصروفات للتصدير', 'warning');
+        return;
+      }
+      
+      const filename = (() => {
+        const now = new Date();
+        const dateStr = now.toISOString().split('T')[0];
+        const companyName = companyInfo?.name?.replace(/[^a-zA-Zأ-ي]/g, '_') || 'Company';
+        const projectName = expenseData.projectName 
+          ? expenseData.projectName.replace(/[^a-zA-Zأ-ي]/g, '_')
+          : 'عام';
+        
+        const seq = String(expenseData.expenses.length).padStart(3, '0');
+        
+        const filename = `${companyName}_${projectName}_مصروف_${seq}_${dateStr}`;
+        
+        return filename;
+      })();
+      
+      const result = await generateExpensesPDF(expenseData, companyInfo, {
+        projectName: expenseData.projectName,
+        dateRange: expenseData.dateRange,
+        filename: filename,
+      });
+      
+      if (result?.success) {
+        showToast('تم تصدير المصاريف بنجاح', 'success');
+      } else {
+        showToast(result?.error || 'حدث خطأ في إنشاء ملف PDF', 'error');
+      }
+    } catch (error) {
+      console.error('PDF Export Error:', error);
+      showToast('حدث خطأ في إنشاء ملف PDF: ' + error.message, 'error');
     }
   };
 
