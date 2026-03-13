@@ -5,6 +5,12 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 const isConfigured = supabaseUrl && supabaseAnonKey && !supabaseUrl.includes('your-project');
 
+console.log('🔍 Supabase Config:', { 
+  url: supabaseUrl ? '✓' : '✗', 
+  key: supabaseAnonKey ? '✓' : '✗',
+  isConfigured 
+});
+
 export const supabase = isConfigured 
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;

@@ -5,9 +5,6 @@
 
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-// Check if Supabase is configured
-const useSupabase = isSupabaseConfigured();
-
 // Supabase table mapping
 const SUPABASE_TABLES = {
   'buildmaster_company_info': 'company_info',
@@ -26,7 +23,7 @@ const SUPABASE_TABLES = {
 
 // Generic Supabase functions
 const supabaseGet = async (localKey) => {
-  if (!useSupabase) return null;
+  if (!isSupabaseConfigured()) return null;
   const table = SUPABASE_TABLES[localKey];
   if (!table) return null;
   
@@ -39,7 +36,7 @@ const supabaseGet = async (localKey) => {
 };
 
 const supabaseSave = async (localKey, items) => {
-  if (!useSupabase) return false;
+  if (!isSupabaseConfigured()) return false;
   const table = SUPABASE_TABLES[localKey];
   if (!table) return false;
   
@@ -405,7 +402,7 @@ export const setCompanyInfo = (companyInfo) => {
   setItem(STORAGE_KEYS.COMPANY_INFO, data);
   
   // Also sync to Supabase
-  if (useSupabase) {
+  if (isSupabaseConfigured()) {
     supabase.from('company_info').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {
       supabase.from('company_info').insert(data).then(({ error }) => {
         if (error) console.error('Error syncing company to Supabase:', error);
@@ -662,7 +659,9 @@ let supabaseCache = {};
 let cacheLoaded = false;
 
 const loadSupabaseCache = async () => {
-  if (!useSupabase || cacheLoaded) return;
+  if (!isSupabaseConfigured() || cacheLoaded) return;
+  
+  console.log('📥 Loading Supabase cache...');
   
   try {
     const [companyInfo, projects, expenses, invoices, contractors, settings, units, leads, contracts, drawings, reports, decisions] = await Promise.all([
@@ -702,7 +701,7 @@ const loadSupabaseCache = async () => {
 };
 
 const getFromCache = (key) => {
-  if (useSupabase && supabaseCache[key]) {
+  if (isSupabaseConfigured() && supabaseCache[key]) {
     return supabaseCache[key];
   }
   return getItem(key) || [];
@@ -713,7 +712,7 @@ const saveToCache = (key, data) => {
   setItem(key, data);
   
   // Also save to Supabase if configured
-  if (useSupabase) {
+  if (isSupabaseConfigured()) {
     const table = SUPABASE_TABLES[key];
     if (table && data.length > 0) {
       // Clear and re-insert
@@ -1156,7 +1155,7 @@ export const saveSettings = (settings) => {
   setItem(STORAGE_KEYS.SETTINGS, settings);
   
   // Also sync to Supabase
-  if (useSupabase) {
+  if (isSupabaseConfigured()) {
     supabase.from('settings').delete().neq('id', '00000000-0000-0000-0000-000000000000').then(() => {
       supabase.from('settings').insert(settings).then(({ error }) => {
         if (error) console.error('Error syncing settings to Supabase:', error);
@@ -1167,7 +1166,7 @@ export const saveSettings = (settings) => {
 };
 
 // Check if Supabase is configured and syncing
-export const isSyncing = () => useSupabase;
+export const isSyncing = () => isSupabaseConfigured();
 
 // ============================================
 // Utility Functions
@@ -1180,7 +1179,7 @@ export const clearAllData = () => {
   });
   
   // Also clear Supabase
-  if (useSupabase) {
+  if (isSupabaseConfigured()) {
     const tables = Object.values(SUPABASE_TABLES);
     tables.forEach(table => {
       supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
