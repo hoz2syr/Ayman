@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import PropTypes from 'prop-types';
 import { Save, FileDown, FileText, Upload, X, Image } from 'lucide-react';
 import { saveReport, generateReportNumber, getCompanyInfo } from '../../utils/storage';
 import { generateReportPDF } from '../../utils/PDFService';
@@ -70,27 +71,6 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
     if (onClose) onClose();
   };
 
-  // Prepare report data for PDF
-  const prepareReportData = () => {
-    const companyInfo = getCompanyInfo();
-    return {
-      reportNumber: formData.reportNumber,
-      date: formData.date,
-      type: formData.subject,
-      engineerName: formData.engineer,
-      status: report?.status || 'جديد',
-      followUpDate: formData.date,
-      description: formData.description,
-      recommendations: formData.recommendations,
-      notes: formData.notes,
-      attachments: formData.attachments,
-      projectName,
-      company: companyInfo,
-    };
-  };
-
-  const companyInfo = getSettings();
-
   const handleExportWord = async () => {
     setLoading(true);
     try {
@@ -133,6 +113,7 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
   const handleExportPDF = async () => {
     setLoading(true);
     try {
+      const companyInfo = getCompanyInfo();
       await generateReportPDF(formData, companyInfo);
     } catch (error) {
       console.error('Error exporting PDF:', error);
@@ -223,7 +204,7 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
                   <h4 className="font-bold border-b pb-1 mb-2">المرفقات</h4>
                   <div className="grid grid-cols-3 gap-2">
                     {formData.attachments.map((att, idx) => (
-                      <div key={idx} className="p-2 border rounded text-center">
+                      <div key={att.name || idx} className="p-2 border rounded text-center">
                         <Image className="w-8 h-8 mx-auto text-gray-400" />
                         <p className="text-xs truncate">{att.name}</p>
                       </div>
@@ -249,8 +230,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
         {/* Header Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1">رقم التقرير</label>
+            <label htmlFor="reportNumber" className="block text-sm text-slate-400 mb-1">رقم التقرير</label>
             <input
+              id="reportNumber"
               type="text"
               value={formData.reportNumber}
               onChange={(e) => handleChange('reportNumber', e.target.value)}
@@ -259,8 +241,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">التاريخ</label>
+            <label htmlFor="reportDate" className="block text-sm text-slate-400 mb-1">التاريخ</label>
             <DatePicker
+              id="reportDate"
               value={formData.date}
               onChange={(date) => handleChange('date', date)}
               placeholder="اختر التاريخ"
@@ -271,8 +254,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
         {/* Subject & Engineer */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm text-slate-400 mb-1">الموضوع *</label>
+            <label htmlFor="reportSubject" className="block text-sm text-slate-400 mb-1">الموضوع *</label>
             <input
+              id="reportSubject"
               type="text"
               required
               value={formData.subject}
@@ -282,8 +266,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
             />
           </div>
           <div>
-            <label className="block text-sm text-slate-400 mb-1">المهندس المسؤول</label>
+            <label htmlFor="reportEngineer" className="block text-sm text-slate-400 mb-1">المهندس المسؤول</label>
             <input
+              id="reportEngineer"
               type="text"
               value={formData.engineer}
               onChange={(e) => handleChange('engineer', e.target.value)}
@@ -295,8 +280,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
 
         {/* Description */}
         <div>
-          <label className="block text-sm text-slate-400 mb-1">الوصف التفصيلي *</label>
+          <label htmlFor="reportDescription" className="block text-sm text-slate-400 mb-1">الوصف التفصيلي *</label>
           <textarea
+            id="reportDescription"
             required
             value={formData.description}
             onChange={(e) => handleChange('description', e.target.value)}
@@ -307,8 +293,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
 
         {/* Recommendations */}
         <div>
-          <label className="block text-sm text-slate-400 mb-1">التوصيات</label>
+          <label htmlFor="reportRecommendations" className="block text-sm text-slate-400 mb-1">التوصيات</label>
           <textarea
+            id="reportRecommendations"
             value={formData.recommendations}
             onChange={(e) => handleChange('recommendations', e.target.value)}
             className="form-input min-h-[80px]"
@@ -318,8 +305,9 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
 
         {/* Notes */}
         <div>
-          <label className="block text-sm text-slate-400 mb-1">الملاحظات</label>
+          <label htmlFor="reportNotes" className="block text-sm text-slate-400 mb-1">الملاحظات</label>
           <textarea
+            id="reportNotes"
             value={formData.notes}
             onChange={(e) => handleChange('notes', e.target.value)}
             className="form-input min-h-[60px]"
@@ -329,7 +317,7 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
 
         {/* Attachments */}
         <div>
-          <label className="block text-sm text-slate-400 mb-1">المرفقات (صور)</label>
+          <label htmlFor="report-attachments" className="block text-sm text-slate-400 mb-1">المرفقات (صور)</label>
           <div className="border-2 border-dashed border-slate-600 rounded-lg p-4">
             <input
               type="file"
@@ -350,7 +338,7 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
             {formData.attachments.length > 0 && (
               <div className="mt-3 space-y-2">
                 {formData.attachments.map((att, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-slate-700 rounded">
+                  <div key={att.name || idx} className="flex items-center justify-between p-2 bg-slate-700 rounded">
                     <div className="flex items-center gap-2">
                       <Image className="w-4 h-4 text-slate-400" />
                       <span className="text-sm text-white truncate max-w-[200px]">{att.name}</span>
@@ -402,6 +390,14 @@ const EngineeringReportForm = ({ projectId, report = null, projectName = '', onC
       </form>
     </Modal>
   );
+};
+
+EngineeringReportForm.propTypes = {
+  projectId: PropTypes.string.isRequired,
+  report: PropTypes.object,
+  projectName: PropTypes.string,
+  onClose: PropTypes.func,
+  onSave: PropTypes.func,
 };
 
 export default EngineeringReportForm;

@@ -61,6 +61,8 @@ export const CompanySchema = {
   email: '',
   address: '',
   logo: null,
+  signature: null,
+  stamp: null,
   taxNumber: '',
   commercialRecord: '',
   createdAt: null,
@@ -349,7 +351,7 @@ export const setCompanyInfo = (companyInfo) => {
 
 export const isCompanySetup = () => {
   const company = getCompanyInfo();
-  return !!(company && company.name && company.name.trim() !== '');
+  return !!(company?.name?.trim() !== '');
 };
 
 // ============================================
@@ -448,7 +450,7 @@ const generateDrawingNumber = () => {
   yearDrawings.forEach(d => {
     const match = d.drawingNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -511,7 +513,7 @@ const generateReportNumber = () => {
   yearReports.forEach(r => {
     const match = r.reportNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -572,7 +574,7 @@ const generateDecisionNumber = () => {
   yearDecisions.forEach(d => {
     const match = d.decisionNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -687,7 +689,7 @@ const generateInvoiceNumber = () => {
   yearInvoices.forEach(i => {
     const match = i.invoiceNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -796,9 +798,9 @@ export const saveUnit = (unit) => {
   
   const validatedUnit = {
     ...unit,
-    priceUSD: parseFloat(unit.priceUSD) || 0,
-    priceSYP: (parseFloat(unit.priceUSD) || 0) * exchangeRate,
-    area: parseFloat(unit.area) || 0,
+    priceUSD: Number.parseFloat(unit.priceUSD) || 0,
+    priceSYP: (Number.parseFloat(unit.priceUSD) || 0) * exchangeRate,
+    area: Number.parseFloat(unit.area) || 0,
   };
   
   if (unit.id) {
@@ -978,7 +980,7 @@ const generateContractNumber = () => {
   yearContracts.forEach(c => {
     const match = c.contractNumber.match(/-(\d+)$/);
     if (match) {
-      const num = parseInt(match[1], 10);
+      const num = Number.parseInt(match[1], 10);
       if (num > maxNum) maxNum = num;
     }
   });
@@ -1035,7 +1037,7 @@ export const importData = (data) => {
 // ============================================
 
 export const generateViewUrl = (docType, docNumber) => {
-  const baseUrl = window.location.origin;
+  const baseUrl = globalThis.location.origin;
   return `${baseUrl}/view/${docType}/${docNumber}`;
 };
 

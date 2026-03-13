@@ -42,14 +42,14 @@ const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = f
   };
 
   return (
-    <aside className={`bg-[#1e293b] flex flex-col border-l border-slate-700 h-full ${collapsed ? 'items-center' : ''}`}>
+    <aside className={`bg-slate-900/50 backdrop-blur-sm flex flex-col border-l border-slate-700/50 h-full ${collapsed ? 'items-center' : ''}`}>
       {/* Logo & Company Info */}
-      <div className={`p-3 sm:p-4 border-b border-slate-700 ${collapsed ? 'py-4' : ''}`}>
+      <div className={`p-3 sm:p-4 border-b border-slate-700/50 ${collapsed ? 'py-4' : ''}`}>
         <div className={`flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
           {isMobile && (
             <button
               onClick={onNavigate}
-              className="absolute top-4 left-4 p-2 rounded-lg hover:bg-slate-700 text-slate-400 lg:hidden"
+              className="absolute top-4 start-4 p-2 rounded-lg hover:bg-slate-700 text-slate-400 lg:hidden"
             >
               <X className="w-5 h-5" />
             </button>
@@ -62,7 +62,7 @@ const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = f
               className={`object-contain rounded-lg bg-white p-1 flex-shrink-0 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}
             />
           ) : (
-            <div className={`bg-[#3b82f6] rounded-lg flex items-center justify-center flex-shrink-0 ${collapsed ? 'w-10 h-10' : 'w-12 h-12'}`}>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg shadow-blue-500/20">
               <Building2 className={`${collapsed ? 'w-5 h-5' : 'w-7 h-7'} text-white`} />
             </div>
           )}

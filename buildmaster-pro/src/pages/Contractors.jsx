@@ -1,11 +1,14 @@
 import { useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, ArrowRight, X } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, ArrowRight, X, LayoutGrid, Table as TableIcon } from 'lucide-react';
 import { getContractors, deleteContractor, getProjects, addContractorPayment, getContractor } from '../utils/storage';
 import ContractorForm from '../components/forms/ContractorForm';
 import Modal from '../components/shared/Modal';
 import DatePicker from '../components/shared/DatePicker';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
+import { Button } from '../components/ui/Button';
+import { Badge } from '../components/ui/Badge';
+import { Card } from '../components/ui/Card';
 
 const Contractors = () => {
   const { showToast } = useToast();
@@ -17,6 +20,7 @@ const Contractors = () => {
   const [selectedContractor, setSelectedContractor] = useState(null);
   const [paymentModal, setPaymentModal] = useState({ isOpen: false, contractorId: null });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
+  const [viewMode, setViewMode] = useState('table'); // 'grid' or 'table'
 
   const refreshData = () => {
     setContractors(getContractors());
@@ -402,16 +406,34 @@ const Contractors = () => {
             className="form-input pr-10"
           />
         </div>
-        <button 
-          onClick={() => setContractorModal({ isOpen: true, contractor: null })}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          {activeTab === 'مقاول' ? 'مقاول جديد' : 'مورد جديد'}
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex bg-slate-700 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-[#3b82f6] text-white' : 'text-slate-400 hover:text-white'}`}
+              title="عرض جدولي"
+            >
+              <TableIcon className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-[#3b82f6] text-white' : 'text-slate-400 hover:text-white'}`}
+              title="عرض بطاقات"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
+          <button 
+            onClick={() => setContractorModal({ isOpen: true, contractor: null })}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-5 h-5" />
+            {activeTab === 'مقاول' ? 'مقاول جديد' : 'مورد جديد'}
+          </button>
+        </div>
       </div>
 
-      {/* Contractors Grid */}
+      {/* Contractors View */}
       {filteredContractors.length === 0 ? (
         <div className="card text-center py-12">
           <p className="text-slate-400 mb-4">
@@ -425,7 +447,80 @@ const Contractors = () => {
             إضافة {activeTab === 'مقاول' ? 'مقاول' : 'مورد'} جديد
           </button>
         </div>
+      ) : viewMode === 'table' ? (
+        /* Data Table View */
+        <div className="card overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-800">
+              <tr>
+                <th className="text-right p-3 text-sm text-slate-400">الاسم</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">التخصص</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">الهاتف</th>
+                <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">البريد</th>
+                <th className="text-right p-3 text-sm text-slate-400">المدفوع</th>
+                <th className="text-right p-3 text-sm text-slate-400">المتبقي</th>
+                <th className="text-center p-3 text-sm text-slate-400">التقييم</th>
+                <th className="text-center p-3 text-sm text-slate-400">إجراءات</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredContractors.map((contractor) => {
+                const stats = getContractorStats(contractor);
+                return (
+                  <tr 
+                    key={contractor.id} 
+                    className="border-t border-slate-700 hover:bg-slate-700/30 cursor-pointer"
+                    onClick={() => setSelectedContractor(contractor)}
+                  >
+                    <td className="p-3">
+                      <div className="flex items-center gap-2">
+                        <div>
+                          <p className="text-white font-medium">{contractor.name}</p>
+                          <p className="text-xs text-slate-500 md:hidden">{getSpecialtyLabel(contractor.specialty)}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-3 text-slate-300 hidden md:table-cell">{getSpecialtyLabel(contractor.specialty)}</td>
+                    <td className="p-3 text-slate-300 hidden lg:table-cell">{contractor.phone || '-'}</td>
+                    <td className="p-3 text-slate-300 hidden lg:table-cell">{contractor.email || '-'}</td>
+                    <td className="p-3 text-green-400 font-medium">${stats.paidUSD.toFixed(2)}</td>
+                    <td className="p-3 text-yellow-400 font-medium">${stats.pendingUSD.toFixed(2)}</td>
+                    <td className="p-3 text-center">
+                      <span className="text-yellow-500">{renderStars(contractor.rating || 0)}</span>
+                    </td>
+                    <td className="p-3" onClick={(e) => e.stopPropagation()}>
+                      <div className="flex justify-center gap-1">
+                        <button
+                          onClick={() => setPaymentModal({ isOpen: true, contractorId: contractor.id })}
+                          className="p-2 text-green-400 hover:bg-slate-700 rounded"
+                          title="تسجيل دفعة"
+                        >
+                          <DollarSign className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => setContractorModal({ isOpen: true, contractor })}
+                          className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded"
+                          title="تعديل"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDelete(contractor.id)}
+                          className="p-2 text-red-500 hover:bg-slate-700 rounded"
+                          title="حذف"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       ) : (
+        /* Grid Cards View */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredContractors.map((contractor) => {
             const stats = getContractorStats(contractor);

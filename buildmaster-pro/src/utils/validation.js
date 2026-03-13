@@ -9,7 +9,7 @@
  * @returns {string} القيمة المقبولة
  */
 export const allowNumbersOnly = (value) => {
-  return value.replace(/[^0-9.]/g, '');
+  return value.replaceAll(/[^0-9.]/g, '');
 };
 
 /**
@@ -18,8 +18,7 @@ export const allowNumbersOnly = (value) => {
  * @returns {string} القيمة المقبولة
  */
 export const allowNumbersDecimalsOnly = (value) => {
-  // Allow only numbers and one decimal point
-  const cleaned = value.replace(/[^0-9.]/g, '');
+  const cleaned = value.replaceAll(/[^0-9.]/g, '');
   const parts = cleaned.split('.');
   if (parts.length > 2) {
     return parts[0] + '.' + parts.slice(1).join('');
@@ -33,7 +32,7 @@ export const allowNumbersDecimalsOnly = (value) => {
  * @returns {string} القيمة المقبولة
  */
 export const allowIntegersOnly = (value) => {
-  return value.replace(/[^0-9]/g, '');
+  return value.replaceAll(/\D/g, '');
 };
 
 /**
@@ -42,8 +41,7 @@ export const allowIntegersOnly = (value) => {
  * @returns {string} الرقم المنسق
  */
 export const formatPhoneNumber = (phone) => {
-  // Remove all non-digits
-  const digits = phone.replace(/\D/g, '');
+  const digits = phone.replaceAll(/\D/g, '');
   
   // Format as Syrian phone number
   if (digits.startsWith('963')) {

@@ -24,7 +24,7 @@ export const formatArabicDate = (date, options = {}) => {
   if (!date) return '';
   
   const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
+  if (Number.isNaN(d.getTime())) return '';
   
   const {
     includeDay = false,
@@ -76,9 +76,9 @@ export const toArabicNumerals = (num) => {
   const arabic = '٠١٢٣٤٥٦٧٨٩';
   
   let result = '';
-  for (let i = 0; i < str.length; i++) {
-    const index = western.indexOf(str[i]);
-    result += index >= 0 ? arabic[index] : str[i];
+  for (const char of str) {
+    const index = western.indexOf(char);
+    result += index >= 0 ? arabic[index] : char;
   }
   
   return result;
@@ -91,7 +91,7 @@ export const toArabicNumerals = (num) => {
  * @returns {string} المبلغ المنسق
  */
 export const formatArabicCurrency = (amount, currency = 'ر.س') => {
-  const formatted = parseFloat(amount).toLocaleString('ar-SA');
+  const formatted = Number.parseFloat(amount).toLocaleString('ar-SA');
   return `${formatted} ${currency}`;
 };
 

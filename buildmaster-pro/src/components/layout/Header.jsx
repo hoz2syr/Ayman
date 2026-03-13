@@ -2,7 +2,7 @@ import { useLocation } from 'react-router-dom';
 import { Menu, ChevronRight, Calendar, Bell } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-const Header = ({ onMenuClick, onCollapseClick, isCollapsed }) => {
+const Header = ({ onMenuClick, onCollapseClick, isCollapsed, isMobile }) => {
   const location = useLocation();
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -33,13 +33,15 @@ const Header = ({ onMenuClick, onCollapseClick, isCollapsed }) => {
     <header className="h-14 sm:h-16 bg-[#0f172a] border-b border-slate-700 flex items-center justify-between px-3 sm:px-4 md:px-6 flex-shrink-0">
       <div className="flex items-center gap-2 sm:gap-3">
         {/* Mobile/Tablet Menu Button */}
-        <button 
-          onClick={onMenuClick}
-          className="lg:hidden p-2 rounded-lg hover:bg-slate-700 text-white touch-target"
-          aria-label="فتح القائمة"
-        >
-          <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
-        </button>
+        {isMobile && (
+          <button 
+            onClick={onMenuClick}
+            className="p-2 rounded-lg hover:bg-slate-700 text-white touch-target"
+            aria-label="فتح القائمة"
+          >
+            <Menu className="w-5 h-5 sm:w-6 sm:h-6" />
+          </button>
+        )}
 
         {/* Desktop Collapse Toggle */}
         {onCollapseClick && (

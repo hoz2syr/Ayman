@@ -1,5 +1,7 @@
 import ExcelJS from 'exceljs';
 import { getCompanyInfo, getSettings } from './storage';
+import { downloadBlob } from './downloadUtils';
+import { getExchangeRate, formatDate, formatNumber, validateExportData, getExportErrorMessage } from './exportUtils';
 
 const colors = {
   primary: '1E3A5F',
@@ -15,18 +17,8 @@ const colors = {
   white: 'FFFFFF',
 };
 
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('ar-SA', { year: 'numeric', month: 'long', day: 'numeric' });
-};
-
-const formatNumber = (num) => {
-  const n = parseFloat(num || 0);
-  return n.toLocaleString();
-};
-
 const addHeader = (worksheet, company, title, projectName) => {
-  const cols = worksheet.columns.length || 8;
+  const cols = worksheet.columns?.length || 8;
   
   worksheet.mergeCells(1, 1, 1, cols);
   worksheet.getCell(1, 1).value = company?.name || 'اسم الشركة';
@@ -171,18 +163,36 @@ const autoFitColumns = (worksheet, headers) => {
   });
 };
 
+const parseArabicNumber = (value) => {
+  if (!value) return 0;
+  const str = String(value);
+  const arabicDigits = '٠١٢٣٤٥٦٧٨٩';
+  const englishDigits = '0123456789';
+  let result = str;
+  for (let i = 0; i < arabicDigits.length; i++) {
+    result = result.replace(new RegExp(arabicDigits[i], 'g'), englishDigits[i]);
+  }
+  result = result.replace(/[٫،.]/g, '.');
+  return parseFloat(result) || 0;
+};
+
 export const exportExpensesToExcel = (expenses, projects, contractors, selectedProjectId = null) => {
-  const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'BuildMaster Pro';
-  workbook.created = new Date();
+  try {
+    const validation = validateExportData(expenses, 'مصروفات');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'BuildMaster Pro';
+    workbook.created = new Date();
   
   const worksheet = workbook.addWorksheet('تقرير المصاريف', {
     views: [{ rightToLeft: true }],
   });
 
   const company = getCompanyInfo();
-  const settings = getSettings() || {};
-  const exchangeRate = settings.exchangeRateUSD || 13000;
+  const exchangeRate = getExchangeRate();
 
   const filteredExpenses = selectedProjectId 
     ? expenses.filter(e => e.projectId === selectedProjectId)
@@ -198,21 +208,22 @@ export const exportExpensesToExcel = (expenses, projects, contractors, selectedP
   const data = filteredExpenses.map(expense => {
     const project = projects.find(p => p.id === expense.projectId);
     const contractor = contractors.find(c => c.id === expense.contractorId);
+    const amountUSD = parseArabicNumber(expense.amountUSD) || parseArabicNumber(expense.amount) || 0;
 
     return {
       category: expense.category || '-',
       description: (expense.description || '-').substring(0, 40),
       projectName: project?.name || '-',
       contractorName: contractor?.name || '-',
-      amountUSD: formatNumber(expense.amountUSD || expense.amount || 0),
-      amountSYP: formatNumber((expense.amountUSD || expense.amount || 0) * exchangeRate),
+      amountUSD: formatNumber(amountUSD),
+      amountSYP: formatNumber(amountUSD * exchangeRate),
       date: expense.date || '-',
     };
   });
 
   const totals = {
-    amountUSD: data.reduce((sum, d) => sum + parseFloat(d.amountUSD.replace(/,/g, '') || 0), 0),
-    amountSYP: data.reduce((sum, d) => sum + parseFloat(d.amountSYP.replace(/,/g, '') || 0), 0),
+    amountUSD: data.reduce((sum, d) => sum + parseArabicNumber(d.amountUSD), 0),
+    amountSYP: data.reduce((sum, d) => sum + parseArabicNumber(d.amountSYP), 0),
   };
 
   const titleRow = addHeader(worksheet, company, 'تقرير المصاريف', selectedProject?.name);
@@ -227,19 +238,24 @@ export const exportExpensesToExcel = (expenses, projects, contractors, selectedP
 
   workbook.xlsx.writeBuffer().then(buffer => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'تقرير_المصاريف.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'تقرير_المصاريف.xlsx');
+  }).catch(error => {
+    console.error('تصدير المصاريف Error:', error);
   });
+  return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير المصاريف', error) };
+  }
 };
 
 export const exportInvoicesToExcel = (invoices, projects, selectedProjectId = null) => {
-  const workbook = new ExcelJS.Workbook();
+  try {
+    const validation = validateExportData(invoices, 'فواتير');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
   workbook.creator = 'BuildMaster Pro';
   workbook.created = new Date();
   
@@ -280,8 +296,8 @@ export const exportInvoicesToExcel = (invoices, projects, selectedProjectId = nu
   });
 
   const totals = {
-    totalUSD: data.reduce((sum, d) => sum + parseFloat(d.totalUSD.replace(/,/g, '') || 0), 0),
-    totalSYP: data.reduce((sum, d) => sum + parseFloat(d.totalSYP.replace(/,/g, '') || 0), 0),
+    totalUSD: data.reduce((sum, d) => sum + parseArabicNumber(d.totalUSD), 0),
+    totalSYP: data.reduce((sum, d) => sum + parseArabicNumber(d.totalSYP), 0),
   };
 
   const titleRow = addHeader(worksheet, company, 'تقرير الفواتير', selectedProject?.name);
@@ -296,19 +312,24 @@ export const exportInvoicesToExcel = (invoices, projects, selectedProjectId = nu
 
   workbook.xlsx.writeBuffer().then(buffer => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'تقرير_الفواتير.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'تقرير_الفواتير.xlsx');
+  }).catch(error => {
+    console.error('تصدير الفواتير Error:', error);
   });
+  return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير الفواتير', error) };
+  }
 };
 
 export const exportLeadsToExcel = (leads, projects, units, selectedProjectId = null) => {
-  const workbook = new ExcelJS.Workbook();
+  try {
+    const validation = validateExportData(leads, 'عملاء مهتمين');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
   workbook.creator = 'BuildMaster Pro';
   workbook.created = new Date();
   
@@ -364,19 +385,24 @@ export const exportLeadsToExcel = (leads, projects, units, selectedProjectId = n
 
   workbook.xlsx.writeBuffer().then(buffer => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'قائمة_المهتمين.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'قائمة_المهتمين.xlsx');
+  }).catch(error => {
+    console.error('تصدير العملاء المهتمين Error:', error);
   });
+  return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير العملاء المهتمين', error) };
+  }
 };
 
 export const exportProjectsToExcel = (projects) => {
-  const workbook = new ExcelJS.Workbook();
+  try {
+    const validation = validateExportData(projects, 'مشاريع');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
   workbook.creator = 'BuildMaster Pro';
   workbook.created = new Date();
   
@@ -410,19 +436,24 @@ export const exportProjectsToExcel = (projects) => {
 
   workbook.xlsx.writeBuffer().then(buffer => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'قائمة_المشاريع.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'قائمة_المشاريع.xlsx');
+  }).catch(error => {
+    console.error('تصدير المشاريع Error:', error);
   });
+  return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير المشاريع', error) };
+  }
 };
 
 export const exportContractorsToExcel = (contractors) => {
-  const workbook = new ExcelJS.Workbook();
+  try {
+    const validation = validateExportData(contractors, 'مقاولين');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
   workbook.creator = 'BuildMaster Pro';
   workbook.created = new Date();
   
@@ -454,15 +485,181 @@ export const exportContractorsToExcel = (contractors) => {
 
   workbook.xlsx.writeBuffer().then(buffer => {
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'قائمة_المقاولين.xlsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadBlob(blob, 'قائمة_المقاولين.xlsx');
+  }).catch(error => {
+    console.error('تصدير المقاولين Error:', error);
   });
+  return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير المقاولين', error) };
+  }
+};
+
+export const exportUnitsToExcel = (units, projects, selectedProjectId = null) => {
+  try {
+    const validation = validateExportData(units, 'وحدات عقارية');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'BuildMaster Pro';
+    workbook.created = new Date();
+    
+    const worksheet = workbook.addWorksheet('الوحدات العقارية', {
+      views: [{ rightToLeft: true }],
+    });
+
+    const company = getCompanyInfo();
+    const settings = getSettings() || {};
+    const exchangeRate = settings.exchangeRateUSD || 13000;
+
+    const filteredUnits = selectedProjectId 
+      ? units.filter(u => u.projectId === selectedProjectId)
+      : units;
+      
+    const selectedProject = selectedProjectId 
+      ? projects.find(p => p.id === selectedProjectId) 
+      : null;
+
+    const typeLabels = {
+      apartment: 'شقة',
+      villa: 'فيلا',
+      shop: 'محل',
+      office: 'مكتب',
+      land: 'أرض',
+      penthouse: 'بنتهاوس',
+      duplex: 'دوبلكس',
+      other: 'أخرى',
+    };
+
+    const statusLabels = {
+      available: 'متاحة',
+      reserved: 'محجوزة',
+      sold: 'مباعة',
+      maintenance: 'صيانة',
+    };
+
+    const headers = ['رقم الوحدة', 'النوع', 'المشروع', 'الطابق', 'المساحة', 'الغرف', 'الحمامات', 'السعر ($)', 'السعر (ل.س)', 'الحالة'];
+    const headerKeys = ['unitNumber', 'type', 'projectName', 'floor', 'area', 'rooms', 'bathrooms', 'priceUSD', 'priceSYP', 'status'];
+
+    const data = filteredUnits.map(unit => {
+      const project = projects.find(p => p.id === unit.projectId);
+      const priceUSD = parseFloat(unit.priceUSD || unit.price || 0);
+
+      return {
+        unitNumber: unit.unitNumber || '-',
+        type: typeLabels[unit.type] || unit.type || '-',
+        projectName: project?.name || '-',
+        floor: unit.floor || '-',
+        area: unit.area ? `${formatNumber(unit.area)} م²` : '-',
+        rooms: unit.rooms || '-',
+        bathrooms: unit.bathrooms || '-',
+        priceUSD: formatNumber(priceUSD),
+        priceSYP: formatNumber(priceUSD * exchangeRate),
+        status: statusLabels[unit.status] || unit.status || '-',
+      };
+    });
+
+    const totals = {
+      priceUSD: data.reduce((sum, d) => sum + parseArabicNumber(d.priceUSD), 0),
+      priceSYP: data.reduce((sum, d) => sum + parseArabicNumber(d.priceSYP), 0),
+    };
+
+    const titleRow = addHeader(worksheet, company, 'الوحدات العقارية', selectedProject?.name);
+    const headerRow = addTableHeader(worksheet, headers, titleRow);
+    const dataRow = addDataRows(worksheet, data, headerKeys, headerRow);
+    
+    const totalsData = ['', '', '', '', '', '', '', formatNumber(totals.priceUSD), formatNumber(totals.priceSYP), ''];
+    addTotalsRow(worksheet, headers, totalsData, dataRow);
+    
+    autoFitColumns(worksheet, headers);
+    addFooter(worksheet, dataRow + 2, headers.length);
+
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      downloadBlob(blob, 'الوحدات_العقارية.xlsx');
+    }).catch(error => {
+      console.error('تصدير الوحدات Error:', error);
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير الوحدات', error) };
+  }
+};
+
+export const exportContractsToExcel = (contracts, units, projects, selectedProjectId = null) => {
+  try {
+    const validation = validateExportData(contracts, 'عقود');
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'BuildMaster Pro';
+    workbook.created = new Date();
+    
+    const worksheet = workbook.addWorksheet('العقود', {
+      views: [{ rightToLeft: true }],
+    });
+
+    const company = getCompanyInfo();
+    const settings = getSettings() || {};
+    const exchangeRate = settings.exchangeRateUSD || 13000;
+
+    const filteredContracts = selectedProjectId 
+      ? contracts.filter(c => c.projectId === selectedProjectId)
+      : contracts;
+
+    const headers = ['رقم العقد', 'التاريخ', 'اسم المشتري', 'الهاتف', 'الوحدة', 'المساحة', 'السعر ($)', 'السعر (ل.س)', 'المقدم', 'المتبقي'];
+    const headerKeys = ['contractNumber', 'date', 'buyerName', 'buyerPhone', 'unitDescription', 'area', 'totalUSD', 'totalSYP', 'downPayment', 'remaining'];
+
+    const data = filteredContracts.map(contract => {
+      const unit = units.find(u => u.id === contract.unitId);
+      const totalUSD = parseFloat(contract.totalUSD || 0);
+      const downPayment = parseFloat(contract.downPayment || 0);
+
+      return {
+        contractNumber: contract.contractNumber || '-',
+        date: contract.date || '-',
+        buyerName: contract.buyerName || '-',
+        buyerPhone: contract.buyerPhone || '-',
+        unitDescription: unit ? `${unit.type} ${unit.unitNumber}` : (contract.unitDescription || '-'),
+        area: contract.area ? `${formatNumber(contract.area)} م²` : '-',
+        totalUSD: formatNumber(totalUSD),
+        totalSYP: formatNumber(totalUSD * exchangeRate),
+        downPayment: formatNumber(downPayment),
+        remaining: formatNumber(totalUSD - downPayment),
+      };
+    });
+
+    const totals = {
+      totalUSD: data.reduce((sum, d) => sum + parseArabicNumber(d.totalUSD), 0),
+      totalSYP: data.reduce((sum, d) => sum + parseArabicNumber(d.totalSYP), 0),
+      downPayment: data.reduce((sum, d) => sum + parseArabicNumber(d.downPayment), 0),
+      remaining: data.reduce((sum, d) => sum + parseArabicNumber(d.remaining), 0),
+    };
+
+    const titleRow = addHeader(worksheet, company, 'العقود', '');
+    const headerRow = addTableHeader(worksheet, headers, titleRow);
+    const dataRow = addDataRows(worksheet, data, headerKeys, headerRow);
+    
+    const totalsData = ['', '', '', '', '', '', formatNumber(totals.totalUSD), formatNumber(totals.totalSYP), formatNumber(totals.downPayment), formatNumber(totals.remaining)];
+    addTotalsRow(worksheet, headers, totalsData, dataRow);
+    
+    autoFitColumns(worksheet, headers);
+    addFooter(worksheet, dataRow + 2, headers.length);
+
+    workbook.xlsx.writeBuffer().then(buffer => {
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      downloadBlob(blob, 'العقود.xlsx');
+    }).catch(error => {
+      console.error('تصدير العقود Error:', error);
+    });
+    return { success: true };
+  } catch (error) {
+    return { success: false, error: getExportErrorMessage('تصدير العقود', error) };
+  }
 };
 
 export default {
@@ -471,4 +668,6 @@ export default {
   exportLeadsToExcel,
   exportProjectsToExcel,
   exportContractorsToExcel,
+  exportUnitsToExcel,
+  exportContractsToExcel,
 };
