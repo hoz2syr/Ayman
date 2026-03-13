@@ -1,0 +1,12 @@
+name = "buildmaster-pro"
+compatibility_date = "2026-03-13"
+
+[site]
+bucket = "./buildmaster-pro/dist"
+
+[[pages_builds]]
+directory = "./buildmaster-pro/dist"
+
+[vars]
+VITE_SUPABASE_URL = "https://byffcjjzoorxbmabfdcg.supabase.co"
+VITE_SUPABASE_ANON_KEY = "sb_publishable_UcmzL0I5KB0eOd-Lr2r7ng_taVe6Eau"

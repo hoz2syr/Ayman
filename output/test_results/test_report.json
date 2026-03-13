@@ -1,0 +1,49 @@
+{
+  "results": [
+    {
+      "page": "Setup",
+      "action": "Fill company data and save",
+      "result": "SUCCESS - Redirected to home"
+    },
+    {
+      "page": "Home",
+      "action": "View statistics",
+      "result": "SUCCESS - Found 8 stat labels"
+    },
+    {
+      "page": "Projects",
+      "action": "Add/edit/delete",
+      "result": "ERROR: Locator.fill: Timeout 30000ms exceeded.\nCall log:\n"
+    },
+    {
+      "page": "Engineering Docs",
+      "action": "Add document",
+      "result": "No add button found"
+    },
+    {
+      "page": "Expenses",
+      "action": "Add expense",
+      "result": "ERROR: Page.fill: Timeout 30000ms exceeded.\nCall log:\n  -"
+    },
+    {
+      "page": "Invoices",
+      "action": "Create invoice",
+      "result": "Create button not visible"
+    },
+    {
+      "page": "Contractors",
+      "action": "Add/pay",
+      "result": "ERROR: Page.fill: Timeout 30000ms exceeded.\nCall log:\n  -"
+    },
+    {
+      "page": "Sales",
+      "action": "Add unit/lead/contract",
+      "result": "No add buttons visible"
+    }
+  ],
+  "success_count": 2,
+  "fail_count": 6,
+  "console_errors": [
+    "In HTML, %s cannot be a descendant of <%s>.\nThis will cause a hydration error.%s <button> button \n\n  ...\n    <RenderedRoute match={{params:{}, ...}} r"
+  ]
+}
