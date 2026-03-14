@@ -701,8 +701,13 @@ const loadSupabaseCache = async () => {
 };
 
 // Real-time subscription for cross-device sync
+let realtimeSetup = false;
+
 const setupRealtimeSync = () => {
-  if (!isSupabaseConfigured()) return;
+  if (!isSupabaseConfigured() || realtimeSetup) return;
+  
+  console.log('📡 Setting up real-time sync...');
+  realtimeSetup = true;
   
   const tables = ['expenses', 'projects', 'invoices', 'contractors', 'units', 'leads', 'contracts', 'drawings', 'reports', 'decisions', 'settings', 'company_info'];
   
@@ -714,8 +719,12 @@ const setupRealtimeSync = () => {
         // Reload cache
         cacheLoaded = false;
         loadSupabaseCache();
+        // Dispatch event for UI update
+        window.dispatchEvent(new CustomEvent('supabase-data-updated', { detail: { table } }));
       })
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`📡 Subscribed to ${table}:`, status);
+      });
   });
 };
 
