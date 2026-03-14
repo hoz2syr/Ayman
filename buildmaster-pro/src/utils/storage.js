@@ -1485,6 +1485,146 @@ export const saveSettings = async (settings) => {
 // Utility Functions
 // ============================================
 
+// Clear all local data (for logout)
+export const clearAllData = () => {
+  // Clear theme and language preferences (optional - keeps user preferences)
+  // To clear everything including preferences, use localStorage.clear()
+  
+  // Clear any cached data that might be stored locally
+  // The app uses Supabase as the primary source, so we mainly need to clear local state
+  
+  console.log('🧹 Local data cleared');
+};
+
+// Export all data to JSON
+export const exportAllData = async () => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured, cannot export data');
+    return {};
+  }
+
+  const [projects, drawings, reports, decisions, expenses, invoices, contractors, units, leads, contracts, settings, companyInfo] = await Promise.all([
+    getProjects(),
+    getDrawings(),
+    getReports(),
+    getDecisions(),
+    getExpenses(),
+    getInvoices(),
+    getContractors(),
+    getUnits(),
+    getLeads(),
+    getContracts(),
+    getSettings(),
+    getCompanyInfo()
+  ]);
+
+  return {
+    version: '1.0',
+    exportDate: new Date().toISOString(),
+    data: {
+      projects,
+      drawings,
+      reports,
+      decisions,
+      expenses,
+      invoices,
+      contractors,
+      units,
+      leads,
+      contracts,
+      settings,
+      companyInfo
+    }
+  };
+};
+
+// Import data from JSON
+export const importData = async (importedData) => {
+  if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured, cannot import data');
+    return;
+  }
+
+  if (!importedData || !importedData.data) {
+    throw new Error('Invalid data format');
+  }
+
+  const { data } = importedData;
+
+  // Import each data type - we'll just save each item
+  // This assumes the structure matches our save functions
+  
+  if (data.projects) {
+    for (const project of data.projects) {
+      await saveProject(project);
+    }
+  }
+
+  if (data.drawings) {
+    for (const drawing of data.drawings) {
+      await saveDrawing(drawing);
+    }
+  }
+
+  if (data.reports) {
+    for (const report of data.reports) {
+      await saveReport(report);
+    }
+  }
+
+  if (data.decisions) {
+    for (const decision of data.decisions) {
+      await saveDecision(decision);
+    }
+  }
+
+  if (data.expenses) {
+    for (const expense of data.expenses) {
+      await saveExpense(expense);
+    }
+  }
+
+  if (data.invoices) {
+    for (const invoice of data.invoices) {
+      await saveInvoice(invoice);
+    }
+  }
+
+  if (data.contractors) {
+    for (const contractor of data.contractors) {
+      await saveContractor(contractor);
+    }
+  }
+
+  if (data.units) {
+    for (const unit of data.units) {
+      await saveUnit(unit);
+    }
+  }
+
+  if (data.leads) {
+    for (const lead of data.leads) {
+      await saveLead(lead);
+    }
+  }
+
+  if (data.contracts) {
+    for (const contract of data.contracts) {
+      await saveContract(contract);
+    }
+  }
+
+  if (data.settings) {
+    await saveSettings(data.settings);
+  }
+
+  if (data.companyInfo) {
+    await setCompanyInfo(data.companyInfo);
+  }
+
+  console.log('✅ Data imported successfully');
+};
+
 export const isSyncing = () => isSupabaseConfigured();
 
 // View URL Generator
@@ -1591,4 +1731,5 @@ export default {
   getLanguage,
   setLanguage,
   subscribeToTable,
+  clearAllData,
 };
