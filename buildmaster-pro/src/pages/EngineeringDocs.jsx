@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { 
   FileImage, 
   FileText, 
@@ -10,7 +10,8 @@ import {
   Trash2, 
   X,
   FileStack,
-  Filter
+  Filter,
+  Loader2
 } from 'lucide-react';
 import { 
   getDrawings, 
@@ -23,41 +24,61 @@ import {
   deleteReport,
   saveDecision, 
   deleteDecision,
-  getCompanyInfo
+  getCompanyInfo,
+  subscribeToTable
 } from '../utils/storage';
 import { generateDecisionPDF, generateReportPDF } from '../utils/PDFService';
 import Modal from '../components/shared/Modal';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 const EngineeringDocs = () => {
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('drawings');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProject, setSelectedProject] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   
-  // Modals state
-  const [drawingModal, setDrawingModal] = useState({ isOpen: false, edit: null });
-  const [reportModal, setReportModal] = useState({ isOpen: false, edit: null });
-  const [decisionModal, setDecisionModal] = useState({ isOpen: false, edit: null });
-  const [viewModal, setViewModal] = useState({ isOpen: false, item: null, type: null });
-  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, itemId: null });
+  // Data states
+  const [projects, setProjects] = useState([]);
+  const [allDrawings, setAllDrawings] = useState([]);
+  const [allReports, setAllReports] = useState([]);
+  const [allDecisions, setAllDecisions] = useState([]);
 
-  // Form states
-  const [drawingForm, setDrawingForm] = useState({ 
-    name: '', 
-    type: '', 
-    projectId: '',
-    relatedReports: [],
-    relatedDecisions: [],
-    file: null,
-    fileName: '',
-    fileType: '',
-    notes: ''
-  });
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [drawingsData, reportsData, decisionsData, projectsData] = await Promise.all([
+          getDrawings(),
+          getReports(),
+          getDecisions(),
+          getProjects()
+        ]);
+        
+        setAllDrawings(drawingsData || []);
+        setAllReports(reportsData || []);
+        setAllDecisions(decisionsData || []);
+        setProjects(projectsData || []);
+      } catch (error) {
+        console.error('Error loading engineering docs:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Handle file upload
-  // Handle file upload
-  const handleFileUpload = (e) => {
+    loadData();
+
+    // Realtime subscription للجداول الثلاثة
+    const unsubscribes = [
+      subscribeToTable('drawings', loadData),
+      subscribeToTable('reports', loadData),
+      subscribeToTable('decisions', loadData)
+    ];
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, [refreshKey]);
+
+  const loadData = () => setRefreshKey(k => k + 1);
     const file = e.target.files[0];
     if (!file) return;
 
@@ -111,10 +132,13 @@ const EngineeringDocs = () => {
 
   const loadData = () => setRefreshKey(k => k + 1);
 
-  const projects = useMemo(() => getProjects(), []);
-  const allDrawings = useMemo(() => getDrawings(), [refreshKey]);
-  const allReports = useMemo(() => getReports(), [refreshKey]);
-  const allDecisions = useMemo(() => getDecisions(), [refreshKey]);
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   // Filtered data
   const drawings = useMemo(() => {

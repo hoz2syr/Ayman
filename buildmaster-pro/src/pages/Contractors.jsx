@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, ArrowRight, X, LayoutGrid, Table as TableIcon } from 'lucide-react';
-import { getContractors, deleteContractor, getProjects, addContractorPayment, getContractor } from '../utils/storage';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, Phone, Mail, MapPin, Calendar, DollarSign, ArrowRight, LayoutGrid, Table as TableIcon, Loader2 } from 'lucide-react';
+import { getContractors, deleteContractor, getProjects, addContractorPayment, getContractor, saveContractor, subscribeToTable } from '../utils/storage';
 import ContractorForm from '../components/forms/ContractorForm';
 import Modal from '../components/shared/Modal';
 import DatePicker from '../components/shared/DatePicker';
@@ -12,18 +12,47 @@ import { Card } from '../components/ui/Card';
 
 const Contractors = () => {
   const { showToast } = useToast();
-  const [contractors, setContractors] = useState(getContractors());
-  const [projects] = useState(getProjects());
+  const [contractors, setContractors] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeTab, setActiveTab] = useState('مقاول'); // مقاول | مورد
+  const [activeTab, setActiveTab] = useState('مقاول');
   const [contractorModal, setContractorModal] = useState({ isOpen: false, contractor: null });
   const [selectedContractor, setSelectedContractor] = useState(null);
   const [paymentModal, setPaymentModal] = useState({ isOpen: false, contractorId: null });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
-  const [viewMode, setViewMode] = useState('table'); // 'grid' or 'table'
+  const [viewMode, setViewMode] = useState('table');
+  const [loading, setLoading] = useState(true);
 
-  const refreshData = () => {
-    setContractors(getContractors());
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      const [contractorsData, projectsData] = await Promise.all([
+        getContractors(),
+        getProjects()
+      ]);
+      setContractors(contractorsData || []);
+      setProjects(projectsData || []);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      showToast('خطأ في تحميل البيانات', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadData();
+
+    // Realtime subscription
+    const unsub = subscribeToTable('contractors', () => {
+      loadData();
+    });
+
+    return () => unsub();
+  }, []);
+
+  const refreshData = async () => {
+    await loadData();
   };
 
   // Filter by tab and search
@@ -47,8 +76,8 @@ const Contractors = () => {
     const payments = contractor.payments || [];
     const paidUSD = payments.reduce((sum, p) => sum + (parseFloat(p.amountUSD) || 0), 0);
     const paidSYP = payments.reduce((sum, p) => sum + (parseFloat(p.amountSYP) || 0), 0);
-    const agreedUSD = parseFloat(contractor.agreedAmountUSD) || 0;
-    const agreedSYP = parseFloat(contractor.agreedAmountSYP) || 0;
+    const agreedUSD = parseFloat(contractor.agreed_amount_usd) || 0;
+    const agreedSYP = parseFloat(contractor.agreed_amount_syp) || 0;
     
     return {
       paidUSD,
@@ -84,10 +113,14 @@ const Contractors = () => {
     setDeleteConfirm({ isOpen: true, id });
   };
 
-  const executeDelete = () => {
-    deleteContractor(deleteConfirm.id);
-    showToast('تم حذف المقاول بنجاح', 'success');
-    refreshData();
+  const executeDelete = async () => {
+    const success = await deleteContractor(deleteConfirm.id);
+    if (success) {
+      showToast('تم حذف المقاول بنجاح', 'success');
+      await refreshData();
+    } else {
+      showToast('خطأ في حذف المقاول', 'error');
+    }
     setDeleteConfirm({ isOpen: false, id: null });
   };
 
@@ -105,10 +138,10 @@ const Contractors = () => {
       notes: '',
     });
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
       e.preventDefault();
       
-      addContractorPayment(paymentModal.contractorId, {
+      const success = await addContractorPayment(paymentModal.contractorId, {
         date: formData.date,
         amountUSD: parseFloat(formData.amountUSD) || 0,
         amountSYP: parseFloat(formData.amountSYP) || 0,
@@ -116,12 +149,18 @@ const Contractors = () => {
         notes: formData.notes,
       });
       
-      setPaymentModal({ isOpen: false, contractorId: null });
-      refreshData();
-      // Update selected contractor if viewing details
-      if (selectedContractor) {
-        setSelectedContractor(getContractor(selectedContractor.id));
+      if (success) {
+        showToast('تم تسجيل الدفعة بنجاح', 'success');
+        await refreshData();
+        if (selectedContractor) {
+          const updated = await getContractor(selectedContractor.id);
+          setSelectedContractor(updated);
+        }
+      } else {
+        showToast('خطأ في تسجيل الدفعة', 'error');
       }
+      
+      setPaymentModal({ isOpen: false, contractorId: null });
     };
 
     return (
@@ -370,6 +409,12 @@ const Contractors = () => {
 
   return (
     <div className="space-y-6 animate-fadeIn">
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+          <span className="mr-3 text-slate-400">جاري تحميل المقاولين...</span>
+        </div>
+      ) : (
       {/* Tabs */}
       <div className="flex gap-2 border-b border-slate-700 pb-2">
         <button

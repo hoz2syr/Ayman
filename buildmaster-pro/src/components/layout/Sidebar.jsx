@@ -15,16 +15,24 @@ import {
   X,
   User
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { getCompanyInfo, clearAllData } from '../../utils/storage';
 import { useAuth } from '../../contexts/AuthContext';
 import ConfirmDialog from '../shared/ConfirmDialog';
 
 const Sidebar = ({ onNavigate, collapsed = false, onToggleCollapse, isMobile = false }) => {
   const navigate = useNavigate();
-  const companyInfo = useMemo(() => getCompanyInfo(), []);
+  const [companyInfo, setCompanyInfo] = useState(null);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const { currentUser, logout } = useAuth();
+
+  useEffect(() => {
+    const loadCompany = async () => {
+      const info = await getCompanyInfo();
+      setCompanyInfo(info);
+    };
+    loadCompany();
+  }, []);
 
   const navItems = [
     { path: '/home', icon: Home, label: 'الرئيسية' },

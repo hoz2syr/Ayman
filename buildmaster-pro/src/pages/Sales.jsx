@@ -1,16 +1,16 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Plus, Grid3X3, List, Trash2, Edit, Eye, 
   X, Search, Building2, Home, Store, Building, Warehouse,
   Phone, Mail, User, Calendar, DollarSign, FileText,
-  Download, FileCheck, AlertCircle, TrendingUp
+  Download, FileCheck, AlertCircle, TrendingUp, Loader2
 } from 'lucide-react';
 import { 
   getProjects, getUnits, saveUnit, deleteUnit, updateUnitStatus,
   getLeads, saveLead, deleteLead, updateLeadStage,
   getContracts, saveContract, deleteContract, getContractNumber,
-  getSettings, saveInvoice, getCompanyInfo
+  getSettings, saveInvoice, getCompanyInfo, subscribeToTable
 } from '../utils/storage';
 import { generateContractPDF } from '../utils/PDFService';
 import { useToast } from '../components/shared/Toast';
@@ -21,6 +21,7 @@ const Sales = () => {
   const { showToast } = useToast();
   const contractRef = useRef(null);
   
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('units');
   const [unitsViewMode, setUnitsViewMode] = useState('grid');
   const [showUnitPanel, setShowUnitPanel] = useState(false);
@@ -38,14 +39,59 @@ const Sales = () => {
   const [selectedLeadForContract, setSelectedLeadForContract] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: '', id: null });
 
-  const projects = useMemo(() => getProjects(), []);
-  const [contracts, setContracts] = useState(() => getContracts());
-  const units = useMemo(() => getUnits(), []);
-  const leads = useMemo(() => getLeads(), []);
-  const settings = useMemo(() => getSettings(), []);
-  const company = useMemo(() => getCompanyInfo(), []);
+  const [projects, setProjects] = useState([]);
+  const [contracts, setContracts] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [settings, setSettings] = useState(null);
+  const [company, setCompany] = useState(null);
 
-  const exchangeRate = settings.exchangeRateUSD || 13000;
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [projectsData, unitsData, leadsData, contractsData, settingsData, companyData] = await Promise.all([
+          getProjects(),
+          getUnits(),
+          getLeads(),
+          getContracts(),
+          getSettings(),
+          getCompanyInfo()
+        ]);
+        
+        setProjects(projectsData || []);
+        setUnits(unitsData || []);
+        setLeads(leadsData || []);
+        setContracts(contractsData || []);
+        setSettings(settingsData);
+        setCompany(companyData);
+      } catch (error) {
+        console.error('Error loading sales data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Realtime subscription للجداول الرئيسية
+    const unsubscribes = [
+      subscribeToTable('units', loadData),
+      subscribeToTable('leads', loadData),
+      subscribeToTable('contracts', loadData)
+    ];
+
+    return () => unsubscribes.forEach(unsub => unsub());
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
+  const exchangeRate = settings?.exchange_rate_usd || settings?.exchangeRateUSD || 13000;
 
   const filteredUnits = useMemo(() => {
     return units.filter(unit => {

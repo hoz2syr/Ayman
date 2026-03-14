@@ -1,55 +1,9 @@
 // ============================================
 // Miftah - نظام إدارة مشاريع البناء (BuildMaster Pro)
-// أدوات التخزين المحلية
+// التخزين على Supabase كمصدر وحيد للبيانات
 // ============================================
 
-const STORAGE_KEYS = {
-  // بيانات الشركة
-  COMPANY_INFO: 'buildmaster_company_info',
-  
-  // المشاريع
-  PROJECTS: 'buildmaster_projects',
-  PROJECT_PREFIX: 'buildmaster_project_',
-  
-  // المخططات
-  DRAWINGS: 'buildmaster_drawings',
-  DRAWING_PREFIX: 'buildmaster_drawing_',
-  
-  // التقارير الهندسية
-  REPORTS: 'buildmaster_reports',
-  REPORT_PREFIX: 'buildmaster_report_',
-  
-  // القرارات الهندسية
-  DECISIONS: 'buildmaster_decisions',
-  DECISION_PREFIX: 'buildmaster_decision_',
-  
-  // المصروفات
-  EXPENSES: 'buildmaster_expenses',
-  EXPENSE_PREFIX: 'buildmaster_expense_',
-  
-  // الفواتير
-  INVOICES: 'buildmaster_invoices',
-  INVOICE_PREFIX: 'buildmaster_invoice_',
-  
-  // المقاولين
-  CONTRACTORS: 'buildmaster_contractors',
-  CONTRACTOR_PREFIX: 'buildmaster_contractor_',
-  
-  // الإعدادات
-  SETTINGS: 'buildmaster_settings',
-
-  // المصادقة
-  AUTH_USER: 'buildmaster_auth_user',
-
-  // الوحدات السكنية
-  UNITS: 'buildmaster_units',
-  
-  // المهتمون
-  LEADS: 'buildmaster_leads',
-  
-  // العقود
-  CONTRACTS: 'buildmaster_contracts',
-};
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 // ============================================
 // Company Information Schema
@@ -65,14 +19,12 @@ export const CompanySchema = {
   stamp: null,
   taxNumber: '',
   commercialRecord: '',
-  createdAt: null,
 };
 
 // ============================================
 // Project Schema
 // ============================================
 export const ProjectSchema = {
-  id: null,
   name: '',
   location: '',
   clientName: '',
@@ -80,39 +32,31 @@ export const ProjectSchema = {
   clientEmail: '',
   startDate: '',
   endDate: '',
-  status: 'قيد التنفيذ', // قيد التنفيذ، مكتمل، متوقف، ملغى
+  status: 'قيد التنفيذ',
   budget: 0,
   paidAmount: 0,
   description: '',
   notes: '',
-  createdAt: null,
-  updatedAt: null,
 };
 
 // ============================================
-// Drawing Schema (المخططات)
+// Drawing Schema
 // ============================================
 export const DrawingSchema = {
-  id: null,
-  drawingNumber: '', // DRW-2025-001
   projectId: null,
   name: '',
-  type: '', // معماري، إنشائي، كهربائي، ميكانيكي، صحي
-  relatedReports: [], // [RPT-001, RPT-002]
-  relatedDecisions: [], // [DEC-001]
-  file: null, // base64
+  type: '',
+  relatedReports: [],
+  relatedDecisions: [],
+  file: null,
   fileName: '',
   notes: '',
-  createdAt: null,
-  updatedAt: null,
 };
 
 // ============================================
-// Report Schema (التقارير الهندسية)
+// Report Schema
 // ============================================
 export const ReportSchema = {
-  id: null,
-  reportNumber: '', // RPT-2025-001
   projectId: null,
   subject: '',
   date: '',
@@ -120,56 +64,47 @@ export const ReportSchema = {
   description: '',
   notes: '',
   recommendations: '',
-  attachments: [], // [{ name, type, data }]
-  relatedDrawings: [], // [DRW-001]
-  relatedDecisions: [], // [DEC-001]
-  createdAt: null,
-  updatedAt: null,
+  attachments: [],
+  relatedDrawings: [],
+  relatedDecisions: [],
 };
 
 // ============================================
-// Decision Schema (القرارات الهندسية)
+// Decision Schema
 // ============================================
 export const DecisionSchema = {
-  id: null,
-  decisionNumber: '', // DEC-2025-001
   projectId: null,
   subject: '',
   date: '',
   responsibleParty: '',
   description: '',
-  decision: '', // القرار المتخذ
-  status: 'معلق', // معلق، منفذ، ملغي
+  decision: '',
+  status: 'معلق',
   dueDate: '',
   notes: '',
-  attachments: [], // [{ name, type, data }]
-  relatedDrawings: [], // [DRW-001]
-  relatedReports: [], // [RPT-001]
-  createdAt: null,
-  updatedAt: null,
+  attachments: [],
+  relatedDrawings: [],
+  relatedReports: [],
 };
 
 // ============================================
 // Expense Schema
 // ============================================
 export const ExpenseSchema = {
-  id: null,
   projectId: null,
   contractorId: null,
-  category: '', // مواد بناء، معدات، عمالة، نقل، أخرى
+  category: '',
   description: '',
   amount: 0,
   date: '',
   receipt: null,
   notes: '',
-  createdAt: null,
 };
 
 // ============================================
 // Invoice Schema
 // ============================================
 export const InvoiceSchema = {
-  id: null,
   invoiceNumber: '',
   projectId: null,
   contractorId: null,
@@ -177,7 +112,7 @@ export const InvoiceSchema = {
   clientEmail: '',
   clientPhone: '',
   clientAddress: '',
-  items: [], // [{ name, unit, quantity, unitPriceUSD, unitPriceSYP, totalUSD, totalSYP }]
+  items: [],
   subtotalUSD: 0,
   subtotalSYP: 0,
   taxRate: 15,
@@ -185,23 +120,20 @@ export const InvoiceSchema = {
   taxAmountSYP: 0,
   totalUSD: 0,
   totalSYP: 0,
-  status: 'مفتوح', // مسودة، مفتوح، مدفوع، متأخر
+  status: 'مفتوح',
   issueDate: '',
   dueDate: '',
   paymentTerms: '',
   notes: '',
-  createdAt: null,
-  paidAt: null,
 };
 
 // ============================================
 // Contractor Schema
 // ============================================
 export const ContractorSchema = {
-  id: null,
   name: '',
-  type: 'مقاول', // مقاول، مورد
-  specialty: '', // بناء، تشطيب، كهرباء، صرف، تكييف، مواد بناء، معدات
+  type: 'مقاول',
+  specialty: '',
   phone: '',
   email: '',
   address: '',
@@ -211,17 +143,15 @@ export const ContractorSchema = {
   agreedAmountSYP: 0,
   notes: '',
   rating: 0,
-  payments: [], // [{ id, date, amountUSD, amountSYP, projectId, notes, createdAt }]
-  createdAt: null,
+  payments: [],
 };
 
 // ============================================
-// Unit Schema (الوحدات السكنية)
+// Unit Schema
 // ============================================
 export const UnitSchema = {
-  id: null,
   unitNumber: '',
-  type: 'apartment', // apartment|shop|office|storage
+  type: 'apartment',
   projectId: null,
   floor: '',
   area: 0,
@@ -229,18 +159,16 @@ export const UnitSchema = {
   bathrooms: 0,
   priceUSD: 0,
   priceSYP: 0,
-  status: 'available', // available|reserved|sold
+  status: 'available',
   buyerId: '',
   description: '',
   notes: '',
-  createdAt: null,
 };
 
 // ============================================
-// Lead Schema (المهتمون)
+// Lead Schema
 // ============================================
 export const LeadSchema = {
-  id: null,
   fullName: '',
   phone: '',
   nationalId: '',
@@ -248,18 +176,16 @@ export const LeadSchema = {
   email: '',
   projectId: '',
   unitId: '',
-  stage: 'interested', // interested|visited|offered|negotiating|reserved|sold|cancelled
+  stage: 'interested',
   budget: 0,
   notes: '',
   contactDate: '',
-  createdAt: null,
 };
 
 // ============================================
-// Contract Schema (العقود)
+// Contract Schema
 // ============================================
 export const ContractSchema = {
-  id: null,
   contractNumber: '',
   date: '',
   sellerName: '',
@@ -281,7 +207,6 @@ export const ContractSchema = {
   witness1: '',
   witness2: '',
   notes: '',
-  createdAt: null,
 };
 
 // ============================================
@@ -294,755 +219,1301 @@ export const SettingsSchema = {
   dateFormat: 'DD/MM/YYYY',
   language: 'ar',
   theme: 'dark',
-  exchangeRateUSD: 13000, // سعر الصرف للدولار مقابل الليرة السورية
+  exchangeRateUSD: 13000,
 };
 
 // ============================================
-// Generic Storage Functions
+// مفاتيح الإعدادات البسيطة في localStorage
+// ============================================
+const UI_SETTINGS_KEYS = {
+  THEME: 'buildmaster_theme',
+  LANGUAGE: 'buildmaster_language',
+};
+
+// ============================================
+// دوال الإعدادات البسيطة (localStorage فقط)
 // ============================================
 
-// الحصول على عنصر من التخزين
-export const getItem = (key) => {
-  try {
-    const item = localStorage.getItem(key);
-    return item ? JSON.parse(item) : null;
-  } catch (error) {
-    console.error(`Error getting item ${key}:`, error);
-    return null;
+export const getTheme = () => {
+  return localStorage.getItem(UI_SETTINGS_KEYS.THEME) || 'dark';
+};
+
+export const setTheme = (theme) => {
+  localStorage.setItem(UI_SETTINGS_KEYS.THEME, theme);
+  document.documentElement.setAttribute('data-theme', theme);
+};
+
+export const getLanguage = () => {
+  return localStorage.getItem(UI_SETTINGS_KEYS.LANGUAGE) || 'ar';
+};
+
+export const setLanguage = (lang) => {
+  localStorage.setItem(UI_SETTINGS_KEYS.LANGUAGE, lang);
+};
+
+// ============================================
+// Company Information (Supabase Only)
+// ============================================
+
+export const getCompanyInfo = async () => {
+  if (!isSupabaseConfigured()) {
+    console.warn('⚠️ Supabase not configured');
+    return { ...CompanySchema };
   }
+
+  const { data, error } = await supabase
+    .from('company_info')
+    .select('*')
+    .limit(1)
+    .single();
+
+  if (error) {
+    console.error('Error fetching company info:', error);
+    return { ...CompanySchema };
+  }
+
+  return data || { ...CompanySchema };
 };
 
-// حفظ عنصر في التخزين
-export const setItem = (key, value) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    return true;
-  } catch (error) {
-    console.error(`Error setting item ${key}:`, error);
+export const setCompanyInfo = async (companyInfo) => {
+  if (!isSupabaseConfigured()) {
+    console.error('❌ Supabase not configured - cannot save');
     return false;
   }
-};
 
-// حذف عنصر من التخزين
-export const removeItem = (key) => {
-  try {
-    localStorage.removeItem(key);
-    return true;
-  } catch (error) {
-    console.error(`Error removing item ${key}:`, error);
+  // Check if company exists
+  const { data: existing } = await supabase
+    .from('company_info')
+    .select('id')
+    .limit(1)
+    .single();
+
+  let result;
+  if (existing) {
+    // Update existing
+    result = await supabase
+      .from('company_info')
+      .update({
+        ...companyInfo,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+  } else {
+    // Insert new
+    result = await supabase
+      .from('company_info')
+      .insert({
+        ...companyInfo,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+  }
+
+  if (result.error) {
+    console.error('Error saving company info:', result.error);
     return false;
   }
+
+  console.log('✅ Company info saved to Supabase');
+  return true;
 };
 
-// ============================================
-// Company Information Functions
-// ============================================
-
-export const getCompanyInfo = () => {
-  return getItem(STORAGE_KEYS.COMPANY_INFO) || { ...CompanySchema };
-};
-
-export const setCompanyInfo = (companyInfo) => {
-  return setItem(STORAGE_KEYS.COMPANY_INFO, {
-    ...companyInfo,
-    createdAt: companyInfo.createdAt || new Date().toISOString(),
-  });
-};
-
-export const isCompanySetup = () => {
-  const company = getCompanyInfo();
+export const isCompanySetup = async () => {
+  const company = await getCompanyInfo();
   return !!(company?.name?.trim() !== '');
 };
 
 // ============================================
-// Projects Functions
+// Projects (Supabase Only)
 // ============================================
 
-export const getProjects = () => {
-  return getItem(STORAGE_KEYS.PROJECTS) || [];
+export const getProjects = async () => {
+  if (!isSupabaseConfigured()) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching projects:', error);
+    return [];
+  }
+
+  return data || [];
 };
 
-export const getProject = (id) => {
-  const projects = getProjects();
-  return projects.find(p => p.id === id) || null;
+export const getProject = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const saveProject = (project) => {
-  const projects = getProjects();
+export const saveProject = async (project) => {
+  if (!isSupabaseConfigured()) {
+    console.error('❌ Supabase not configured - cannot save');
+    return null;
+  }
+
   const now = new Date().toISOString();
-  
+  const projectData = {
+    name: project.name,
+    location: project.location || '',
+    client_name: project.clientName || '',
+    client_phone: project.clientPhone || '',
+    client_email: project.clientEmail || '',
+    start_date: project.startDate || '',
+    end_date: project.endDate || '',
+    status: project.status || 'قيد التنفيذ',
+    budget: parseFloat(project.budget) || 0,
+    paid_amount: parseFloat(project.paidAmount) || 0,
+    description: project.description || '',
+    notes: project.notes || '',
+    updated_at: now,
+  };
+
+  let result;
+
   if (project.id) {
-    // تحديث مشروع موجود
-    const index = projects.findIndex(p => p.id === project.id);
-    if (index !== -1) {
-      projects[index] = { ...projects[index], ...project, updatedAt: now };
-    }
+    // Update existing
+    result = await supabase
+      .from('projects')
+      .update(projectData)
+      .eq('id', project.id)
+      .select()
+      .single();
   } else {
-    // إضافة مشروع جديد
-    const newProject = {
-      ...project,
-      id: Date.now().toString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    projects.push(newProject);
+    // Create new
+    projectData.created_at = now;
+    result = await supabase
+      .from('projects')
+      .insert(projectData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.PROJECTS, projects);
-  return project.id ? project.id : projects[projects.length - 1].id;
+
+  if (result.error) {
+    console.error('Error saving project:', result.error);
+    return null;
+  }
+
+  console.log('✅ Project saved to Supabase:', result.data?.id);
+  return result.data?.id;
 };
 
-export const deleteProject = (id) => {
-  const projects = getProjects().filter(p => p.id !== id);
-  setItem(STORAGE_KEYS.PROJECTS, projects);
+export const deleteProject = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('projects')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error('Error deleting project:', error);
+    return false;
+  }
+
+  console.log('✅ Project deleted from Supabase:', id);
+  return true;
 };
 
 // ============================================
-// Drawings Functions (المخططات)
+// Drawings (Supabase Only)
 // ============================================
 
-export const getDrawings = () => {
-  return getItem(STORAGE_KEYS.DRAWINGS) || [];
+export const getDrawings = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('drawings')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getDrawingsByProject = (projectId) => {
-  const drawings = getDrawings();
-  return drawings.filter(d => d.projectId === projectId);
+export const getDrawingsByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('drawings')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const saveDrawing = (drawing) => {
-  const drawings = getDrawings();
+export const saveDrawing = async (drawing) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const drawingData = {
+    project_id: drawing.projectId,
+    name: drawing.name,
+    type: drawing.type || '',
+    related_reports: drawing.relatedReports || [],
+    related_decisions: drawing.relatedDecisions || [],
+    file: drawing.file,
+    file_name: drawing.fileName || '',
+    notes: drawing.notes || '',
+    updated_at: now,
+  };
+
+  let result;
+
   if (drawing.id) {
-    const index = drawings.findIndex(d => d.id === drawing.id);
-    if (index !== -1) {
-      drawings[index] = { ...drawings[index], ...drawing, updatedAt: now };
-    }
+    result = await supabase
+      .from('drawings')
+      .update(drawingData)
+      .eq('id', drawing.id)
+      .select()
+      .single();
   } else {
-    const newDrawing = {
-      ...drawing,
-      id: Date.now().toString(),
-      drawingNumber: generateDrawingNumber(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    drawings.push(newDrawing);
+    drawingData.drawing_number = await generateDrawingNumber();
+    drawingData.created_at = now;
+    result = await supabase
+      .from('drawings')
+      .insert(drawingData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.DRAWINGS, drawings);
+
+  if (result.error) {
+    console.error('Error saving drawing:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteDrawing = (id) => {
-  const drawings = getDrawings().filter(d => d.id !== id);
-  setItem(STORAGE_KEYS.DRAWINGS, drawings);
+export const deleteDrawing = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('drawings')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-// توليد رقم المخطط تلقائياً
-const generateDrawingNumber = () => {
-  const drawings = getDrawings();
+const generateDrawingNumber = async () => {
+  const drawings = await getDrawings();
   const year = new Date().getFullYear();
-  
-  // Get max number for current year
-  const yearDrawings = drawings.filter(d => d.drawingNumber?.includes(`-${year}-`));
+  const yearDrawings = drawings.filter(d => d.drawing_number?.includes(`-${year}-`));
   let maxNum = 0;
-  
   yearDrawings.forEach(d => {
-    const match = d.drawingNumber.match(/-(\d+)$/);
-    if (match) {
-      const num = Number.parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
+    const match = d.drawing_number?.match(/-(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
   });
-  
-  const count = maxNum + 1;
-  return `DRW-${year}-${count.toString().padStart(4, '0')}`;
+  return `DRW-${year}-${(maxNum + 1).toString().padStart(4, '0')}`;
 };
-
-export const getDrawingNumber = () => generateDrawingNumber();
 
 // ============================================
-// Reports Functions (التقارير الهندسية)
+// Reports (Supabase Only)
 // ============================================
 
-export const getReports = () => {
-  return getItem(STORAGE_KEYS.REPORTS) || [];
+export const getReports = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getReportsByProject = (projectId) => {
-  const reports = getReports();
-  return reports.filter(r => r.projectId === projectId);
+export const getReportsByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const saveReport = (report) => {
-  const reports = getReports();
+export const saveReport = async (report) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const reportData = {
+    project_id: report.projectId,
+    subject: report.subject || '',
+    date: report.date || '',
+    engineer: report.engineer || '',
+    description: report.description || '',
+    notes: report.notes || '',
+    recommendations: report.recommendations || '',
+    attachments: report.attachments || [],
+    related_drawings: report.relatedDrawings || [],
+    related_decisions: report.relatedDecisions || [],
+    updated_at: now,
+  };
+
+  let result;
+
   if (report.id) {
-    const index = reports.findIndex(r => r.id === report.id);
-    if (index !== -1) {
-      reports[index] = { ...reports[index], ...report, updatedAt: now };
-    }
+    result = await supabase
+      .from('reports')
+      .update(reportData)
+      .eq('id', report.id)
+      .select()
+      .single();
   } else {
-    const newReport = {
-      ...report,
-      id: Date.now().toString(),
-      reportNumber: generateReportNumber(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    reports.push(newReport);
+    reportData.report_number = await generateReportNumber();
+    reportData.created_at = now;
+    result = await supabase
+      .from('reports')
+      .insert(reportData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.REPORTS, reports);
+
+  if (result.error) {
+    console.error('Error saving report:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteReport = (id) => {
-  const reports = getReports().filter(r => r.id !== id);
-  setItem(STORAGE_KEYS.REPORTS, reports);
+export const deleteReport = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('reports')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-const generateReportNumber = () => {
-  const reports = getReports();
+const generateReportNumber = async () => {
+  const reports = await getReports();
   const year = new Date().getFullYear();
-  
-  // Get max number for current year
-  const yearReports = reports.filter(r => r.reportNumber?.includes(`-${year}-`));
+  const yearReports = reports.filter(r => r.report_number?.includes(`-${year}-`));
   let maxNum = 0;
-  
   yearReports.forEach(r => {
-    const match = r.reportNumber.match(/-(\d+)$/);
-    if (match) {
-      const num = Number.parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
+    const match = r.report_number?.match(/-(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
   });
-  
-  const count = maxNum + 1;
-  return `RPT-${year}-${count.toString().padStart(4, '0')}`;
+  return `RPT-${year}-${(maxNum + 1).toString().padStart(4, '0')}`;
 };
 
 // ============================================
-// Decisions Functions (القرارات الهندسية)
+// Decisions (Supabase Only)
 // ============================================
 
-export const getDecisions = () => {
-  return getItem(STORAGE_KEYS.DECISIONS) || [];
+export const getDecisions = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('decisions')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getDecisionsByProject = (projectId) => {
-  const decisions = getDecisions();
-  return decisions.filter(d => d.projectId === projectId);
+export const getDecisionsByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('decisions')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const saveDecision = (decision) => {
-  const decisions = getDecisions();
+export const saveDecision = async (decision) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const decisionData = {
+    project_id: decision.projectId,
+    subject: decision.subject || '',
+    date: decision.date || '',
+    responsible_party: decision.responsibleParty || '',
+    description: decision.description || '',
+    decision: decision.decision || '',
+    status: decision.status || 'معلق',
+    due_date: decision.dueDate || '',
+    notes: decision.notes || '',
+    attachments: decision.attachments || [],
+    related_drawings: decision.relatedDrawings || [],
+    related_reports: decision.relatedReports || [],
+    updated_at: now,
+  };
+
+  let result;
+
   if (decision.id) {
-    const index = decisions.findIndex(d => d.id === decision.id);
-    if (index !== -1) {
-      decisions[index] = { ...decisions[index], ...decision, updatedAt: now };
-    }
+    result = await supabase
+      .from('decisions')
+      .update(decisionData)
+      .eq('id', decision.id)
+      .select()
+      .single();
   } else {
-    const newDecision = {
-      ...decision,
-      id: Date.now().toString(),
-      decisionNumber: generateDecisionNumber(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    decisions.push(newDecision);
+    decisionData.decision_number = await generateDecisionNumber();
+    decisionData.created_at = now;
+    result = await supabase
+      .from('decisions')
+      .insert(decisionData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.DECISIONS, decisions);
+
+  if (result.error) {
+    console.error('Error saving decision:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteDecision = (id) => {
-  const decisions = getDecisions().filter(d => d.id !== id);
-  setItem(STORAGE_KEYS.DECISIONS, decisions);
+export const deleteDecision = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('decisions')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-const generateDecisionNumber = () => {
-  const decisions = getDecisions();
+const generateDecisionNumber = async () => {
+  const decisions = await getDecisions();
   const year = new Date().getFullYear();
-  
-  // Get max number for current year
-  const yearDecisions = decisions.filter(d => d.decisionNumber?.includes(`-${year}-`));
+  const yearDecisions = decisions.filter(d => d.decision_number?.includes(`-${year}-`));
   let maxNum = 0;
-  
   yearDecisions.forEach(d => {
-    const match = d.decisionNumber.match(/-(\d+)$/);
-    if (match) {
-      const num = Number.parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
+    const match = d.decision_number?.match(/-(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
   });
-  
-  const count = maxNum + 1;
-  return `DEC-${year}-${count.toString().padStart(4, '0')}`;
+  return `DEC-${year}-${(maxNum + 1).toString().padStart(4, '0')}`;
 };
 
 // ============================================
-// Expenses Functions
+// Expenses (Supabase Only)
 // ============================================
 
-export const getExpenses = () => {
-  return getItem(STORAGE_KEYS.EXPENSES) || [];
+export const getExpenses = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getExpense = (id) => {
-  const expenses = getExpenses();
-  return expenses.find(e => e.id === id) || null;
+export const getExpense = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const getExpensesByProject = (projectId) => {
-  const expenses = getExpenses();
-  return expenses.filter(e => e.projectId === projectId);
+export const getExpensesByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const saveExpense = (expense) => {
-  const expenses = getExpenses();
+export const saveExpense = async (expense) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const expenseData = {
+    project_id: expense.projectId,
+    contractor_id: expense.contractorId,
+    category: expense.category || '',
+    description: expense.description || '',
+    amount: parseFloat(expense.amount) || 0,
+    date: expense.date || '',
+    receipt: expense.receipt,
+    notes: expense.notes || '',
+    updated_at: now,
+  };
+
+  let result;
+
   if (expense.id) {
-    // تحديث مصروف موجود
-    const index = expenses.findIndex(e => e.id === expense.id);
-    if (index !== -1) {
-      expenses[index] = { ...expenses[index], ...expense, updatedAt: now };
-    }
+    result = await supabase
+      .from('expenses')
+      .update(expenseData)
+      .eq('id', expense.id)
+      .select()
+      .single();
   } else {
-    // إضافة مصروف جديد
-    const newExpense = {
-      ...expense,
-      id: Date.now().toString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    expenses.push(newExpense);
+    expenseData.created_at = now;
+    result = await supabase
+      .from('expenses')
+      .insert(expenseData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.EXPENSES, expenses);
+
+  if (result.error) {
+    console.error('Error saving expense:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteExpense = (id) => {
-  const expenses = getExpenses().filter(e => e.id !== id);
-  setItem(STORAGE_KEYS.EXPENSES, expenses);
+export const deleteExpense = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('expenses')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
 // ============================================
-// Invoices Functions
+// Invoices (Supabase Only)
 // ============================================
 
-export const getInvoices = () => {
-  return getItem(STORAGE_KEYS.INVOICES) || [];
+export const getInvoices = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getInvoice = (id) => {
-  const invoices = getInvoices();
-  return invoices.find(i => i.id === id) || null;
+export const getInvoice = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const getInvoicesByProject = (projectId) => {
-  const invoices = getInvoices();
-  return invoices.filter(i => i.projectId === projectId);
+export const getInvoicesByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const saveInvoice = (invoice) => {
-  const invoices = getInvoices();
+export const saveInvoice = async (invoice) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const invoiceData = {
+    invoice_number: invoice.invoiceNumber || await generateInvoiceNumber(),
+    project_id: invoice.projectId,
+    contractor_id: invoice.contractorId,
+    client_name: invoice.clientName || '',
+    client_email: invoice.clientEmail || '',
+    client_phone: invoice.clientPhone || '',
+    client_address: invoice.clientAddress || '',
+    items: invoice.items || [],
+    subtotal_usd: parseFloat(invoice.subtotalUSD) || 0,
+    subtotal_syp: parseFloat(invoice.subtotalSYP) || 0,
+    tax_rate: parseFloat(invoice.taxRate) || 15,
+    tax_amount_usd: parseFloat(invoice.taxAmountUSD) || 0,
+    tax_amount_syp: parseFloat(invoice.taxAmountSYP) || 0,
+    total_usd: parseFloat(invoice.totalUSD) || 0,
+    total_syp: parseFloat(invoice.totalSYP) || 0,
+    status: invoice.status || 'مفتوح',
+    issue_date: invoice.issueDate || '',
+    due_date: invoice.dueDate || '',
+    payment_terms: invoice.paymentTerms || '',
+    notes: invoice.notes || '',
+    paid_at: invoice.paidAt,
+    updated_at: now,
+  };
+
+  let result;
+
   if (invoice.id) {
-    // تحديث فاتورة موجودة
-    const index = invoices.findIndex(i => i.id === invoice.id);
-    if (index !== -1) {
-      invoices[index] = { ...invoices[index], ...invoice, updatedAt: now };
-    }
+    result = await supabase
+      .from('invoices')
+      .update(invoiceData)
+      .eq('id', invoice.id)
+      .select()
+      .single();
   } else {
-    // إضافة فاتورة جديدة
-    const newInvoice = {
-      ...invoice,
-      id: Date.now().toString(),
-      invoiceNumber: generateInvoiceNumber(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    invoices.push(newInvoice);
+    invoiceData.created_at = now;
+    result = await supabase
+      .from('invoices')
+      .insert(invoiceData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.INVOICES, invoices);
+
+  if (result.error) {
+    console.error('Error saving invoice:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteInvoice = (id) => {
-  const invoices = getInvoices().filter(i => i.id !== id);
-  setItem(STORAGE_KEYS.INVOICES, invoices);
+export const deleteInvoice = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('invoices')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-const generateInvoiceNumber = () => {
-  const invoices = getInvoices();
+const generateInvoiceNumber = async () => {
+  const invoices = await getInvoices();
   const year = new Date().getFullYear();
-  
-  // Get max number for current year
-  const yearInvoices = invoices.filter(i => i.invoiceNumber?.includes(`-${year}-`));
+  const yearInvoices = invoices.filter(i => i.invoice_number?.includes(`-${year}-`));
   let maxNum = 0;
-  
   yearInvoices.forEach(i => {
-    const match = i.invoiceNumber.match(/-(\d+)$/);
-    if (match) {
-      const num = Number.parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
+    const match = i.invoice_number?.match(/-(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
   });
-  
-  const count = maxNum + 1;
-  return `INV-${year}-${count.toString().padStart(4, '0')}`;
+  return `INV-${year}-${(maxNum + 1).toString().padStart(4, '0')}`;
 };
 
 // ============================================
-// Contractors Functions
+// Contractors (Supabase Only)
 // ============================================
 
-export const getContractors = () => {
-  return getItem(STORAGE_KEYS.CONTRACTORS) || [];
+export const getContractors = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('contractors')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getContractor = (id) => {
-  const contractors = getContractors();
-  return contractors.find(c => c.id === id) || null;
+export const getContractor = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('contractors')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const saveContractor = (contractor) => {
-  const contractors = getContractors();
+export const saveContractor = async (contractor) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
+  const contractorData = {
+    name: contractor.name || '',
+    type: contractor.type || 'مقاول',
+    specialty: contractor.specialty || '',
+    phone: contractor.phone || '',
+    email: contractor.email || '',
+    address: contractor.address || '',
+    contract_start_date: contractor.contractStartDate || '',
+    contract_end_date: contractor.contractEndDate || '',
+    agreed_amount_usd: parseFloat(contractor.agreedAmountUSD) || 0,
+    agreed_amount_syp: parseFloat(contractor.agreedAmountSYP) || 0,
+    notes: contractor.notes || '',
+    rating: contractor.rating || 0,
+    payments: contractor.payments || [],
+    updated_at: now,
+  };
+
+  let result;
+
   if (contractor.id) {
-    // تحديث مقاول موجود
-    const index = contractors.findIndex(c => c.id === contractor.id);
-    if (index !== -1) {
-      contractors[index] = { ...contractors[index], ...contractor, updatedAt: now };
-    }
+    result = await supabase
+      .from('contractors')
+      .update(contractorData)
+      .eq('id', contractor.id)
+      .select()
+      .single();
   } else {
-    // إضافة مقاول جديد
-    const newContractor = {
-      ...contractor,
-      id: Date.now().toString(),
-      createdAt: now,
-      updatedAt: now,
-    };
-    contractors.push(newContractor);
+    contractorData.created_at = now;
+    result = await supabase
+      .from('contractors')
+      .insert(contractorData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.CONTRACTORS, contractors);
-};
 
-export const deleteContractor = (id) => {
-  const contractors = getContractors().filter(c => c.id !== id);
-  setItem(STORAGE_KEYS.CONTRACTORS, contractors);
-};
-
-export const addContractorPayment = (contractorId, payment) => {
-  const contractors = getContractors();
-  const index = contractors.findIndex(c => c.id === contractorId);
-  
-  if (index !== -1) {
-    const newPayment = {
-      id: Date.now().toString(),
-      ...payment,
-      createdAt: new Date().toISOString(),
-    };
-    
-    contractors[index].payments = [
-      ...(contractors[index].payments || []),
-      newPayment
-    ];
-    
-    setItem(STORAGE_KEYS.CONTRACTORS, contractors);
-    return newPayment;
+  if (result.error) {
+    console.error('Error saving contractor:', result.error);
+    return null;
   }
-  return null;
+
+  return result.data?.id;
 };
 
-export const getContractorPayments = (contractorId) => {
-  const contractor = getContractor(contractorId);
+export const deleteContractor = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('contractors')
+    .delete()
+    .eq('id', id);
+
+  return !error;
+};
+
+export const addContractorPayment = async (contractorId, payment) => {
+  const contractor = await getContractor(contractorId);
+  if (!contractor) return null;
+
+  const payments = [...(contractor.payments || []), {
+    id: crypto.randomUUID(),
+    ...payment,
+    created_at: new Date().toISOString(),
+  }];
+
+  const result = await saveContractor({
+    ...contractor,
+    payments,
+  });
+
+  return result ? payments[payments.length - 1] : null;
+};
+
+export const getContractorPayments = async (contractorId) => {
+  const contractor = await getContractor(contractorId);
   return contractor?.payments || [];
 };
 
 // ============================================
-// Units Functions (الوحدات السكنية)
+// Units (Supabase Only)
 // ============================================
 
-export const getUnits = () => {
-  return getItem(STORAGE_KEYS.UNITS) || [];
+export const getUnits = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('units')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getUnit = (id) => {
-  const units = getUnits();
-  return units.find(u => u.id === id) || null;
+export const getUnit = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('units')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const getUnitsByProject = (projectId) => {
-  const units = getUnits();
-  return units.filter(u => u.projectId === projectId);
+export const getUnitsByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('units')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getAvailableUnits = () => {
-  const units = getUnits();
+export const getAvailableUnits = async () => {
+  const units = await getUnits();
   return units.filter(u => u.status === 'available');
 };
 
-export const saveUnit = (unit) => {
-  const units = getUnits();
+export const saveUnit = async (unit) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const settings = await getSettings();
+  const exchangeRate = settings.exchange_rate_usd || 13000;
   const now = new Date().toISOString();
-  const settings = getSettings();
-  const exchangeRate = settings.exchangeRateUSD || 13000;
-  
-  const validatedUnit = {
-    ...unit,
-    priceUSD: Number.parseFloat(unit.priceUSD) || 0,
-    priceSYP: (Number.parseFloat(unit.priceUSD) || 0) * exchangeRate,
-    area: Number.parseFloat(unit.area) || 0,
+
+  const unitData = {
+    unit_number: unit.unitNumber || '',
+    type: unit.type || 'apartment',
+    project_id: unit.projectId,
+    floor: unit.floor || '',
+    area: parseFloat(unit.area) || 0,
+    rooms: parseInt(unit.rooms) || 0,
+    bathrooms: parseInt(unit.bathrooms) || 0,
+    price_usd: parseFloat(unit.priceUSD) || 0,
+    price_syp: (parseFloat(unit.priceUSD) || 0) * exchangeRate,
+    status: unit.status || 'available',
+    buyer_id: unit.buyerId || '',
+    description: unit.description || '',
+    notes: unit.notes || '',
+    updated_at: now,
   };
-  
+
+  let result;
+
   if (unit.id) {
-    const index = units.findIndex(u => u.id === unit.id);
-    if (index !== -1) {
-      units[index] = { 
-        ...units[index], 
-        ...validatedUnit, 
-        priceSYP: validatedUnit.priceUSD * exchangeRate,
-        updatedAt: now 
-      };
-    }
+    result = await supabase
+      .from('units')
+      .update(unitData)
+      .eq('id', unit.id)
+      .select()
+      .single();
   } else {
-    const newUnit = {
-      ...validatedUnit,
-      id: Date.now().toString(),
-      priceSYP: validatedUnit.priceUSD * exchangeRate,
-      createdAt: now,
-    };
-    units.push(newUnit);
+    unitData.created_at = now;
+    result = await supabase
+      .from('units')
+      .insert(unitData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.UNITS, units);
-  return unit.id ? unit.id : units[units.length - 1].id;
+
+  if (result.error) {
+    console.error('Error saving unit:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteUnit = (id) => {
-  const units = getUnits().filter(u => u.id !== id);
-  setItem(STORAGE_KEYS.UNITS, units);
+export const deleteUnit = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('units')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-export const updateUnitStatus = (id, status, buyerId = null) => {
-  const units = getUnits();
-  const index = units.findIndex(u => u.id === id);
-  
-  if (index !== -1) {
-    units[index] = { 
-      ...units[index], 
-      status, 
-      buyerId: buyerId || units[index].buyerId,
-      updatedAt: new Date().toISOString() 
-    };
-    setItem(STORAGE_KEYS.UNITS, units);
-  }
+export const updateUnitStatus = async (id, status, buyerId = null) => {
+  const unit = await getUnit(id);
+  if (!unit) return false;
+
+  const result = await supabase
+    .from('units')
+    .update({
+      status,
+      buyer_id: buyerId || unit.buyer_id,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id);
+
+  return !result.error;
 };
 
 // ============================================
-// Leads Functions (المهتمون)
+// Leads (Supabase Only)
 // ============================================
 
-export const getLeads = () => {
-  return getItem(STORAGE_KEYS.LEADS) || [];
+export const getLeads = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getLead = (id) => {
-  const leads = getLeads();
-  return leads.find(l => l.id === id) || null;
+export const getLead = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
 };
 
-export const getLeadsByProject = (projectId) => {
-  const leads = getLeads();
-  return leads.filter(l => l.projectId === projectId);
+export const getLeadsByProject = async (projectId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
 };
 
-export const getActiveLeads = () => {
-  const leads = getLeads();
+export const getActiveLeads = async () => {
+  const leads = await getLeads();
   return leads.filter(l => !['sold', 'cancelled'].includes(l.stage));
 };
 
-export const saveLead = (lead) => {
-  const leads = getLeads();
+export const saveLead = async (lead) => {
+  if (!isSupabaseConfigured()) return null;
+
   const now = new Date().toISOString();
-  
-  if (lead.id) {
-    const index = leads.findIndex(l => l.id === lead.id);
-    if (index !== -1) {
-      leads[index] = { ...leads[index], ...lead, updatedAt: now };
-    }
-  } else {
-    const newLead = {
-      ...lead,
-      id: Date.now().toString(),
-      createdAt: now,
-    };
-    leads.push(newLead);
-  }
-  
-  setItem(STORAGE_KEYS.LEADS, leads);
-  return lead.id ? lead.id : leads[leads.length - 1].id;
-};
-
-export const deleteLead = (id) => {
-  const leads = getLeads().filter(l => l.id !== id);
-  setItem(STORAGE_KEYS.LEADS, leads);
-};
-
-export const updateLeadStage = (id, stage) => {
-  const leads = getLeads();
-  const index = leads.findIndex(l => l.id === id);
-  
-  if (index !== -1) {
-    leads[index] = { ...leads[index], stage, updatedAt: new Date().toISOString() };
-    setItem(STORAGE_KEYS.LEADS, leads);
-  }
-};
-
-// ============================================
-// Contracts Functions (العقود)
-// ============================================
-
-export const getContracts = () => {
-  return getItem(STORAGE_KEYS.CONTRACTS) || [];
-};
-
-export const getContract = (id) => {
-  const contracts = getContracts();
-  return contracts.find(c => c.id === id) || null;
-};
-
-export const getContractsByUnit = (unitId) => {
-  const contracts = getContracts();
-  return contracts.filter(c => c.unitId === unitId);
-};
-
-export const getContractsByLead = (leadId) => {
-  const contracts = getContracts();
-  return contracts.filter(c => c.buyerId === leadId);
-};
-
-export const saveContract = (contract) => {
-  const contracts = getContracts();
-  const now = new Date().toISOString();
-  const settings = getSettings();
-  const exchangeRate = settings.exchangeRateUSD || 13000;
-  
-  const totalUSD = contract.totalUSD || 0;
-  const area = contract.area || 1;
-  
-  const contractData = {
-    ...contract,
-    pricePerMeter: area > 0 ? totalUSD / area : 0,
-    totalSYP: totalUSD * exchangeRate,
-    remainingSYP: totalUSD * exchangeRate,
+  const leadData = {
+    full_name: lead.fullName || '',
+    phone: lead.phone || '',
+    national_id: lead.nationalId || '',
+    id_issue_date: lead.idIssueDate || '',
+    email: lead.email || '',
+    project_id: lead.projectId || '',
+    unit_id: lead.unitId || '',
+    stage: lead.stage || 'interested',
+    budget: parseFloat(lead.budget) || 0,
+    notes: lead.notes || '',
+    contact_date: lead.contactDate || '',
+    updated_at: now,
   };
-  
-  if (contract.id) {
-    const index = contracts.findIndex(c => c.id === contract.id);
-    if (index !== -1) {
-      contracts[index] = { ...contracts[index], ...contractData, updatedAt: now };
-    }
+
+  let result;
+
+  if (lead.id) {
+    result = await supabase
+      .from('leads')
+      .update(leadData)
+      .eq('id', lead.id)
+      .select()
+      .single();
   } else {
-    const newContract = {
-      ...contractData,
-      id: Date.now().toString(),
-      contractNumber: generateContractNumber(),
-      createdAt: now,
-    };
-    contracts.push(newContract);
+    leadData.created_at = now;
+    result = await supabase
+      .from('leads')
+      .insert(leadData)
+      .select()
+      .single();
   }
-  
-  setItem(STORAGE_KEYS.CONTRACTS, contracts);
-  return contract.id ? contract.id : contracts[contracts.length - 1].id;
+
+  if (result.error) {
+    console.error('Error saving lead:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
 };
 
-export const deleteContract = (id) => {
-  const contracts = getContracts().filter(c => c.id !== id);
-  setItem(STORAGE_KEYS.CONTRACTS, contracts);
+export const deleteLead = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('leads')
+    .delete()
+    .eq('id', id);
+
+  return !error;
 };
 
-const generateContractNumber = () => {
-  const contracts = getContracts();
+export const updateLeadStage = async (id, stage) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const result = await supabase
+    .from('leads')
+    .update({
+      stage,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id);
+
+  return !result.error;
+};
+
+// ============================================
+// Contracts (Supabase Only)
+// ============================================
+
+export const getContracts = async () => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
+};
+
+export const getContract = async (id) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  return error ? null : data;
+};
+
+export const getContractsByUnit = async (unitId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .eq('unit_id', unitId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
+};
+
+export const getContractsByLead = async (leadId) => {
+  if (!isSupabaseConfigured()) return [];
+
+  const { data, error } = await supabase
+    .from('contracts')
+    .select('*')
+    .eq('buyer_id', leadId)
+    .order('created_at', { ascending: false });
+
+  return error ? [] : (data || []);
+};
+
+export const saveContract = async (contract) => {
+  if (!isSupabaseConfigured()) return null;
+
+  const settings = await getSettings();
+  const exchangeRate = settings.exchange_rate_usd || 13000;
+  const now = new Date().toISOString();
+
+  const totalUSD = parseFloat(contract.totalUSD) || 0;
+  const area = parseFloat(contract.area) || 1;
+
+  const contractData = {
+    contract_number: contract.contractNumber || await generateContractNumber(),
+    date: contract.date || '',
+    seller_name: contract.sellerName || '',
+    seller_license: contract.sellerLicense || '',
+    buyer_id: contract.buyerId || '',
+    buyer_name: contract.buyerName || '',
+    buyer_national_id: contract.buyerNationalId || '',
+    buyer_id_issue_date: contract.buyerIdIssueDate || '',
+    unit_id: contract.unitId || '',
+    property_number: contract.propertyNumber || '',
+    region: contract.region || '',
+    unit_description: contract.unitDescription || '',
+    area,
+    floor: contract.floor || '',
+    total_usd: totalUSD,
+    price_per_meter: area > 0 ? totalUSD / area : 0,
+    total_syp: totalUSD * exchangeRate,
+    remaining_syp: totalUSD * exchangeRate,
+    witness1: contract.witness1 || '',
+    witness2: contract.witness2 || '',
+    notes: contract.notes || '',
+    updated_at: now,
+  };
+
+  let result;
+
+  if (contract.id) {
+    result = await supabase
+      .from('contracts')
+      .update(contractData)
+      .eq('id', contract.id)
+      .select()
+      .single();
+  } else {
+    contractData.created_at = now;
+    result = await supabase
+      .from('contracts')
+      .insert(contractData)
+      .select()
+      .single();
+  }
+
+  if (result.error) {
+    console.error('Error saving contract:', result.error);
+    return null;
+  }
+
+  return result.data?.id;
+};
+
+export const deleteContract = async (id) => {
+  if (!isSupabaseConfigured()) return false;
+
+  const { error } = await supabase
+    .from('contracts')
+    .delete()
+    .eq('id', id);
+
+  return !error;
+};
+
+const generateContractNumber = async () => {
+  const contracts = await getContracts();
   const year = new Date().getFullYear();
-  
-  const yearContracts = contracts.filter(c => c.contractNumber?.includes(`-${year}-`));
+  const yearContracts = contracts.filter(c => c.contract_number?.includes(`-${year}-`));
   let maxNum = 0;
-  
   yearContracts.forEach(c => {
-    const match = c.contractNumber.match(/-(\d+)$/);
-    if (match) {
-      const num = Number.parseInt(match[1], 10);
-      if (num > maxNum) maxNum = num;
-    }
+    const match = c.contract_number?.match(/-(\d+)$/);
+    if (match) maxNum = Math.max(maxNum, parseInt(match[1], 10));
   });
-  
-  const count = maxNum + 1;
-  return `CNT-${year}-${count.toString().padStart(4, '0')}`;
+  return `CNT-${year}-${(maxNum + 1).toString().padStart(4, '0')}`;
 };
 
-export const getContractNumber = () => generateContractNumber();
+export const getContractNumber = async () => generateContractNumber();
 
 // ============================================
-// Settings Functions
+// Settings (Supabase Only)
 // ============================================
 
-export const getSettings = () => {
-  return getItem(STORAGE_KEYS.SETTINGS) || { ...SettingsSchema };
+export const getSettings = async () => {
+  if (!isSupabaseConfigured()) {
+    return { ...SettingsSchema };
+  }
+
+  const { data, error } = await supabase
+    .from('settings')
+    .select('*')
+    .limit(1)
+    .single();
+
+  if (error) {
+    console.error('Error fetching settings:', error);
+    return { ...SettingsSchema };
+  }
+
+  return data || { ...SettingsSchema };
 };
 
-export const saveSettings = (settings) => {
-  return setItem(STORAGE_KEYS.SETTINGS, settings);
+export const saveSettings = async (settings) => {
+  if (!isSupabaseConfigured()) return false;
+
+  // Check if settings exist
+  const { data: existing } = await supabase
+    .from('settings')
+    .select('id')
+    .limit(1)
+    .single();
+
+  let result;
+
+  if (existing) {
+    result = await supabase
+      .from('settings')
+      .update({
+        currency: settings.currency || 'SAR',
+        currency_symbol: settings.currencySymbol || 'ر.س',
+        tax_rate: parseFloat(settings.taxRate) || 15,
+        date_format: settings.dateFormat || 'DD/MM/YYYY',
+        language: settings.language || 'ar',
+        theme: settings.theme || 'dark',
+        exchange_rate_usd: parseFloat(settings.exchangeRateUSD) || 13000,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id)
+      .select()
+      .single();
+  } else {
+    result = await supabase
+      .from('settings')
+      .insert({
+        currency: settings.currency || 'SAR',
+        currency_symbol: settings.currencySymbol || 'ر.س',
+        tax_rate: parseFloat(settings.taxRate) || 15,
+        date_format: settings.dateFormat || 'DD/MM/YYYY',
+        language: settings.language || 'ar',
+        theme: settings.theme || 'dark',
+        exchange_rate_usd: parseFloat(settings.exchangeRateUSD) || 13000,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+  }
+
+  if (result.error) {
+    console.error('Error saving settings:', result.error);
+    return false;
+  }
+
+  return true;
 };
 
 // ============================================
 // Utility Functions
 // ============================================
 
-// مسح جميع البيانات
-export const clearAllData = () => {
-  Object.values(STORAGE_KEYS).forEach(key => {
-    localStorage.removeItem(key);
-  });
-};
+export const isSyncing = () => isSupabaseConfigured();
 
-// تصدير البيانات
-export const exportAllData = () => {
-  const data = {};
-  Object.values(STORAGE_KEYS).forEach(key => {
-    data[key] = getItem(key);
-  });
-  return data;
-};
-
-// استيراد البيانات
-export const importData = (data) => {
-  Object.entries(data).forEach(([key, value]) => {
-    if (Object.values(STORAGE_KEYS).includes(key)) {
-      setItem(key, value);
-    }
-  });
-};
-
-// ============================================
 // View URL Generator
-// ============================================
-
 export const generateViewUrl = (docType, docNumber) => {
-  const baseUrl = globalThis.location.origin;
+  const baseUrl = globalThis.location?.origin || '';
   return `${baseUrl}/view/${docType}/${docNumber}`;
 };
 
+// ============================================
+// Realtime Subscription (Optional Enhancement)
+// ============================================
+
+export const subscribeToTable = (table, callback) => {
+  if (!isSupabaseConfigured()) return () => {};
+
+  const channel = supabase
+    .channel(`${table}-changes`)
+    .on('postgres_changes', { event: '*', schema: 'public', table }, (payload) => {
+      console.log(`🔄 ${table} changed:`, payload);
+      callback(payload);
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+};
+
 export default {
-  STORAGE_KEYS,
   CompanySchema,
   ProjectSchema,
   DrawingSchema,
@@ -1114,7 +1585,10 @@ export default {
   getSettings,
   saveSettings,
   generateViewUrl,
-  clearAllData,
-  exportAllData,
-  importData,
+  isSyncing,
+  getTheme,
+  setTheme,
+  getLanguage,
+  setLanguage,
+  subscribeToTable,
 };

@@ -11,9 +11,18 @@ const DocViewer = () => {
   const [document, setDocument] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [settings, setSettings] = useState(null);
 
   useEffect(() => {
-    const loadDocument = () => {
+    const loadSettings = async () => {
+      const s = await getSettings();
+      setSettings(s);
+    };
+    loadSettings();
+  }, []);
+
+  useEffect(() => {
+    const loadDocument = async () => {
       setLoading(true);
       setError(null);
 
@@ -24,31 +33,31 @@ const DocViewer = () => {
 
         switch (docType) {
           case 'report':
-            const reports = getReports();
+            const reports = await getReports();
             doc = reports.find(r => r.reportNumber === docNumber);
             title = 'تقرير هندسي';
             date = doc?.date;
             break;
           case 'decision':
-            const decisions = getDecisions();
+            const decisions = await getDecisions();
             doc = decisions.find(d => d.decisionNumber === docNumber);
             title = 'قرار هندسي';
             date = doc?.date;
             break;
           case 'drawing':
-            const drawings = getDrawings();
+            const drawings = await getDrawings();
             doc = drawings.find(d => d.drawingNumber === docNumber);
             title = 'مخطط هندسي';
             date = doc?.createdAt;
             break;
           case 'expense':
-            const expenses = getExpenses();
+            const expenses = await getExpenses();
             doc = expenses.find(e => e.id === docNumber);
             title = 'تقرير مصاريف';
             date = doc?.date;
             break;
           case 'invoice':
-            const invoices = getInvoices();
+            const invoices = await getInvoices();
             doc = invoices.find(i => i.invoiceNumber === docNumber);
             title = 'فاتورة';
             date = doc?.issueDate;
@@ -78,8 +87,7 @@ const DocViewer = () => {
     loadDocument();
   }, [docType, docNumber]);
 
-  const settings = useMemo(() => getSettings(), []);
-  const exchangeRate = settings?.exchangeRateUSD || 13000;
+  const exchangeRate = settings?.exchange_rate_usd || settings?.exchangeRateUSD || 13000;
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '';

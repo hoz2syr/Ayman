@@ -22,9 +22,13 @@ const Setup = () => {
   const signatureCanvasRef = useRef(null);
 
   useEffect(() => {
-    if (isCompanySetup()) {
-      navigate('/home');
-    }
+    const checkSetup = async () => {
+      const setup = await isCompanySetup();
+      if (setup) {
+        navigate('/home');
+      }
+    };
+    checkSetup();
   }, [navigate]);
 
   useEffect(() => {
@@ -87,7 +91,7 @@ const Setup = () => {
     setFormData({ ...formData, signature: null });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     const newErrors = {};
@@ -115,8 +119,12 @@ const Setup = () => {
       signature: signatureData,
     };
 
-    setCompanyInfo(companyData);
-    navigate('/home');
+    const success = await setCompanyInfo(companyData);
+    if (success) {
+      navigate('/login');
+    } else {
+      setLoading(false);
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Edit, Trash2, FileDown, Calendar, Filter } from 'lucide-react';
-import { getExpenses, deleteExpense, getProjects, getContractors, getCompanyInfo } from '../utils/storage';
+import { Plus, Edit, Trash2, FileDown, Calendar, Filter, Loader2 } from 'lucide-react';
+import { getExpenses, deleteExpense, getProjects, getContractors, getCompanyInfo, subscribeToTable } from '../utils/storage';
 import ExpenseForm from '../components/forms/ExpenseForm';
 import { generateExpensesPDF } from '../utils/PDFService';
 import { exportExpensesToExcel } from '../utils/exportExcel';
@@ -14,24 +14,61 @@ import { StatCard } from '../components/ui/StatCard';
 
 const Expenses = () => {
   const { showToast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [expenseModal, setExpenseModal] = useState({ isOpen: false, expense: null });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
   
+  // Data states
+  const [expenses, setExpenses] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [contractors, setContractors] = useState([]);
+
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [expensesData, projectsData, contractorsData] = await Promise.all([
+          getExpenses(),
+          getProjects(),
+          getContractors()
+        ]);
+        
+        setExpenses(expensesData || []);
+        setProjects(projectsData || []);
+        setContractors(contractorsData || []);
+      } catch (error) {
+        console.error('Error loading expenses:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Realtime subscription
+    const unsub = subscribeToTable('expenses', () => {
+      loadData();
+    });
+
+    return () => unsub();
+  }, [refreshTrigger]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
+
   const refreshData = () => setRefreshTrigger(prev => prev + 1);
-  
-  // Force re-render on refresh trigger
-  useEffect(() => {}, [refreshTrigger]);
-  
+
   // Filters
   const [dateFilter, setDateFilter] = useState('all'); // all, daily, weekly, monthly
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [projectFilter, setProjectFilter] = useState('all');
-  
-  const expenses = getExpenses();
-  const projects = getProjects();
-  const contractors = getContractors();
 
   // Calculate totals by category
   const totals = useMemo(() => {

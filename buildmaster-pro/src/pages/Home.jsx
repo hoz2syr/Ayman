@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building, BarChart3, Activity, TrendingDown, Clock } from 'lucide-react';
-import { getProjects, getExpenses, getInvoices, getContractors, getCompanyInfo, getUnits, getLeads, getContracts } from '../utils/storage';
+import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building, BarChart3, Activity, TrendingDown, Clock, Loader2 } from 'lucide-react';
+import { getProjects, getExpenses, getInvoices, getContractors, getCompanyInfo, getUnits, getLeads, getContracts, subscribeToTable } from '../utils/storage';
 import { ExpensesPieChart, MonthlyExpensesChart, ProjectsBarChart, SalesLineChart } from '../components/shared/Charts';
 import { StatCard } from '../components/ui/StatCard';
 import { Card } from '../components/ui/Card';
@@ -22,15 +22,63 @@ const SectionHeader = ({ title, icon: Icon, badge }) => (
 const Home = () => {
   const navigate = useNavigate();
   const [showCharts, setShowCharts] = useState(false);
+  const [loading, setLoading] = useState(true);
   
-  const projects = useMemo(() => getProjects(), []);
-  const expenses = useMemo(() => getExpenses(), []);
-  const invoices = useMemo(() => getInvoices(), []);
-  const contractors = useMemo(() => getContractors(), []);
-  const company = useMemo(() => getCompanyInfo(), []);
-  const units = useMemo(() => getUnits(), []);
-  const leads = useMemo(() => getLeads(), []);
-  const contracts = useMemo(() => getContracts(), []);
+  const [projects, setProjects] = useState([]);
+  const [expenses, setExpenses] = useState([]);
+  const [invoices, setInvoices] = useState([]);
+  const [contractors, setContractors] = useState([]);
+  const [company, setCompany] = useState(null);
+  const [units, setUnits] = useState([]);
+  const [leads, setLeads] = useState([]);
+  const [contracts, setContracts] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [projectsData, expensesData, invoicesData, contractorsData, companyData, unitsData, leadsData, contractsData] = await Promise.all([
+          getProjects(),
+          getExpenses(),
+          getInvoices(),
+          getContractors(),
+          getCompanyInfo(),
+          getUnits(),
+          getLeads(),
+          getContracts()
+        ]);
+        
+        setProjects(projectsData || []);
+        setExpenses(expensesData || []);
+        setInvoices(invoicesData || []);
+        setContractors(contractorsData || []);
+        setCompany(companyData);
+        setUnits(unitsData || []);
+        setLeads(leadsData || []);
+        setContracts(contractsData || []);
+      } catch (error) {
+        console.error('Error loading home data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Realtime subscription - تحديث تلقائي عند تغيير البيانات
+    const unsubscribes = [];
+    const tables = ['projects', 'expenses', 'invoices', 'contractors', 'units', 'leads', 'contracts'];
+    
+    tables.forEach(table => {
+      const unsub = subscribeToTable(table, () => {
+        loadData(); // إعادة تحميل البيانات عند تغييرها
+      });
+      unsubscribes.push(unsub);
+    });
+
+    return () => {
+      unsubscribes.forEach(unsub => unsub());
+    };
+  }, []);
 
   const stats = useMemo(() => {
     const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
@@ -159,6 +207,14 @@ const Home = () => {
   const getCardsForSection = (section) => {
     return allCards.filter(card => card.section === section);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fadeIn">

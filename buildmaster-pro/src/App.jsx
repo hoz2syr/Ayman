@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import Layout from './components/layout/Layout';
 import Setup from './pages/Setup';
@@ -56,10 +56,39 @@ const AuthRoute = ({ children }) => {
 };
 
 const AppRoutes = () => {
-  const companyInfo = useMemo(() => getCompanyInfo(), []);
-  const needsSetup = useMemo(() => !isCompanySetup(), []);
+  const [companyInfo, setCompanyInfo] = useState(null);
+  const [needsSetup, setNeedsSetup] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
-  if (!companyInfo) {
+  useEffect(() => {
+    const checkCompanySetup = async () => {
+      try {
+        const setup = await isCompanySetup();
+        setNeedsSetup(!setup);
+        
+        if (setup) {
+          const info = await getCompanyInfo();
+          setCompanyInfo(info);
+        }
+      } catch (error) {
+        console.error('Error checking company setup:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkCompanySetup();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!companyInfo && !needsSetup) {
     return (
       <div className="min-h-screen bg-[#0f172a] flex items-center justify-center">
         <div className="w-8 h-8 border-4 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
@@ -69,21 +98,17 @@ const AppRoutes = () => {
 
   return (
     <Routes>
+      {/* Setup route - only shown if company not setup - NO authentication required */}
+      {needsSetup && (
+        <Route path="/" element={<Setup />} />
+      )}
+
       {/* Login Route */}
       <Route path="/login" element={
         <AuthRoute>
           <Login />
         </AuthRoute>
       } />
-
-      {/* Setup route - only shown if company not setup */}
-      {needsSetup && (
-        <Route path="/" element={
-          <ProtectedRoute>
-            <Setup />
-          </ProtectedRoute>
-        } />
-      )}
 
       {/* Public document viewer - without layout */}
       <Route path="/view/:docType/:docNumber" element={<DocViewer />} />

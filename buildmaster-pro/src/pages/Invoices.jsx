@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings, getCompanyInfo } from '../utils/storage';
+import { useState, useMemo, useEffect } from 'react';
+import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings, getCompanyInfo, subscribeToTable } from '../utils/storage';
 import InvoiceForm from '../components/forms/InvoiceForm';
 import { generateInvoicePDF } from '../utils/PDFService';
 import { exportToWord } from '../utils/exportWord';
@@ -12,20 +12,72 @@ import { Card } from '../components/ui/Card';
 
 const Invoices = () => {
   const { showToast } = useToast();
-  const [invoices, setInvoices] = useState(getInvoices());
-  const [projects, setProjects] = useState(getProjects());
-  const [contractors, setContractors] = useState(getContractors());
+  const [loading, setLoading] = useState(true);
+  const [invoices, setInvoices] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [contractors, setContractors] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [invoiceModal, setInvoiceModal] = useState({ isOpen: false, invoice: null });
   const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, id: null });
 
+  // Load data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [invoicesData, projectsData, contractorsData] = await Promise.all([
+          getInvoices(),
+          getProjects(),
+          getContractors()
+        ]);
+        
+        setInvoices(invoicesData || []);
+        setProjects(projectsData || []);
+        setContractors(contractorsData || []);
+      } catch (error) {
+        console.error('Error loading invoices:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+
+    // Realtime subscription
+    const unsub = subscribeToTable('invoices', () => {
+      loadData();
+    });
+
+    return () => unsub();
+  }, []);
+
   // Refresh data
-  const refreshData = () => {
-    setInvoices(getInvoices());
-    setProjects(getProjects());
-    setContractors(getContractors());
+  const refreshData = async () => {
+    setLoading(true);
+    try {
+      const [invoicesData, projectsData, contractorsData] = await Promise.all([
+        getInvoices(),
+        getProjects(),
+        getContractors()
+      ]);
+      
+      setInvoices(invoicesData || []);
+      setProjects(projectsData || []);
+      setContractors(contractorsData || []);
+    } catch (error) {
+      console.error('Error refreshing invoices:', error);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   // Filter invoices
   const filteredInvoices = useMemo(() => {
