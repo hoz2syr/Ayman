@@ -1,13 +1,12 @@
 import { useMemo, useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building, BarChart3, Activity, TrendingDown, Clock, Loader2 } from 'lucide-react';
+import { FolderKanban, Receipt, FileText, Users, TrendingUp, DollarSign, AlertTriangle, Calendar, ArrowLeft, Home as HomeIcon, Building, BarChart3, Loader2 } from 'lucide-react';
 import { getProjects, getExpenses, getInvoices, getContractors, getCompanyInfo, getUnits, getLeads, getContracts, subscribeToTable } from '../utils/storage';
 import { ExpensesPieChart, MonthlyExpensesChart, ProjectsBarChart, SalesLineChart } from '../components/shared/Charts';
 import { StatCard } from '../components/ui/StatCard';
-import { Card } from '../components/ui/Card';
-import { Badge } from '../components/ui/Badge';
+import PropTypes from 'prop-types';
 
-const SectionHeader = ({ title, icon: Icon, badge }) => (
+const SectionHeader = ({ title, badge }) => (
   <div className="flex items-center justify-between mb-4">
     <div className="flex items-center gap-2">
       <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
@@ -18,6 +17,11 @@ const SectionHeader = ({ title, icon: Icon, badge }) => (
     {badge}
   </div>
 );
+
+SectionHeader.propTypes = {
+  title: PropTypes.string.isRequired,
+  badge: PropTypes.node,
+};
 
 const Home = () => {
   const navigate = useNavigate();
@@ -81,13 +85,13 @@ const Home = () => {
   }, []);
 
   const stats = useMemo(() => {
-    const totalBudget = projects.reduce((sum, p) => sum + (parseFloat(p.budget) || 0), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (parseFloat(e.amountUSD || e.amount || 0)), 0);
+    const totalBudget = projects.reduce((sum, p) => sum + (Number.parseFloat(p.budget) || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (Number.parseFloat(e.amountUSD || e.amount || 0)), 0);
     
     const availableUnits = units.filter(u => u.status === 'available').length;
     const soldUnits = units.filter(u => u.status === 'sold').length;
     const activeLeads = leads.filter(l => !['sold', 'cancelled'].includes(l.stage)).length;
-    const totalSalesUSD = contracts.reduce((sum, c) => sum + (parseFloat(c.totalUSD) || 0), 0);
+    const totalSalesUSD = contracts.reduce((sum, c) => sum + (Number.parseFloat(c.totalUSD) || 0), 0);
     
     return {
       projects: projects.length,
@@ -187,26 +191,6 @@ const Home = () => {
     { title: 'إجمالي المبيعات', value: `$${stats.totalSalesUSD.toLocaleString()}`, icon: DollarSign, color: 'amber', path: '/sales', delay: 700 },
   ];
 
-  const colorMap = {
-    blue: { bg: 'bg-blue-500/10', border: 'border-blue-500/30', icon: 'bg-blue-500', text: 'text-blue-400' },
-    red: { bg: 'bg-red-500/10', border: 'border-red-500/30', icon: 'bg-red-500', text: 'text-red-400' },
-    green: { bg: 'bg-green-500/10', border: 'border-green-500/30', icon: 'bg-green-500', text: 'text-green-400' },
-    amber: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', icon: 'bg-amber-500', text: 'text-amber-400' },
-    emerald: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', icon: 'bg-emerald-500', text: 'text-emerald-400' },
-    slate: { bg: 'bg-slate-500/10', border: 'border-slate-500/30', icon: 'bg-slate-500', text: 'text-slate-400' },
-    indigo: { bg: 'bg-indigo-500/10', border: 'border-indigo-500/30', icon: 'bg-indigo-500', text: 'text-indigo-400' },
-    orange: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', icon: 'bg-orange-500', text: 'text-orange-400' },
-    purple: { bg: 'bg-purple-500/10', border: 'border-purple-500/30', icon: 'bg-purple-500', text: 'text-purple-400' },
-  };
-
-  const allCards = [
-    ...statCards.map(card => ({ ...card, section: 'main' })),
-    ...salesCards.map(card => ({ ...card, section: 'sales' })),
-  ];
-
-  const getCardsForSection = (section) => {
-    return allCards.filter(card => card.section === section);
-  };
 
   if (loading) {
     return (
@@ -350,8 +334,8 @@ const Home = () => {
       <div className="space-y-3">
         <SectionHeader title="إحصائيات المشاريع" icon={FolderKanban} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {statCards.map((stat, index) => (
-            <Link key={index} to={stat.path}>
+          {statCards.map((stat) => (
+            <Link key={stat.title} to={stat.path}>
               <StatCard
                 title={stat.title}
                 value={stat.value}
@@ -368,8 +352,8 @@ const Home = () => {
       <div className="space-y-3">
         <SectionHeader title="مبيعات الوحدات" icon={DollarSign} />
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {salesCards.map((stat, index) => (
-            <Link key={index} to={stat.path}>
+          {salesCards.map((stat) => (
+            <Link key={stat.title} to={stat.path}>
               <StatCard
                 title={stat.title}
                 value={stat.value}

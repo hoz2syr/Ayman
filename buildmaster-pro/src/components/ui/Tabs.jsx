@@ -1,13 +1,14 @@
-import { useState } from "react";
 import { cn } from "../../lib/utils";
 
-const Tabs = ({ value, onValueChange, children, className }) => {
+const Tabs = ({ children, className }) => {
   return (
     <div className={cn("", className)}>
       {children}
     </div>
   );
 };
+
+Tabs.displayName = "Tabs";
 
 const TabsList = ({ children, className }) => {
   return (

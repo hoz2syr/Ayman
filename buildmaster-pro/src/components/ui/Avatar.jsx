@@ -1,5 +1,12 @@
 import { cn } from "../../lib/utils";
 
+const sizeClasses = {
+  sm: "w-8 h-8 text-xs",
+  default: "w-10 h-10 text-sm",
+  lg: "w-12 h-12 text-base",
+  xl: "w-16 h-16 text-lg",
+};
+
 const Avatar = ({
   src,
   alt,
@@ -7,12 +14,6 @@ const Avatar = ({
   size = "default",
   className,
 }) => {
-  const sizeClasses = {
-    sm: "w-8 h-8 text-xs",
-    default: "w-10 h-10 text-sm",
-    lg: "w-12 h-12 text-base",
-    xl: "w-16 h-16 text-lg",
-  };
 
   const initial = fallback || alt?.charAt(0)?.toUpperCase() || "?";
 

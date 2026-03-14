@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Printer, Download, FileText, AlertCircle, ArrowLeft } from 'lucide-react';
 import { getReports, getDecisions, getDrawings, getExpenses, getInvoices, getLeads, getSettings } from '../utils/storage';
@@ -32,36 +32,41 @@ const DocViewer = () => {
         let date = '';
 
         switch (docType) {
-          case 'report':
+          case 'report': {
             const reports = await getReports();
             doc = reports.find(r => r.reportNumber === docNumber);
             title = 'تقرير هندسي';
             date = doc?.date;
             break;
-          case 'decision':
+          }
+          case 'decision': {
             const decisions = await getDecisions();
             doc = decisions.find(d => d.decisionNumber === docNumber);
             title = 'قرار هندسي';
             date = doc?.date;
             break;
-          case 'drawing':
+          }
+          case 'drawing': {
             const drawings = await getDrawings();
             doc = drawings.find(d => d.drawingNumber === docNumber);
             title = 'مخطط هندسي';
             date = doc?.createdAt;
             break;
-          case 'expense':
+          }
+          case 'expense': {
             const expenses = await getExpenses();
             doc = expenses.find(e => e.id === docNumber);
             title = 'تقرير مصاريف';
             date = doc?.date;
             break;
-          case 'invoice':
+          }
+          case 'invoice': {
             const invoices = await getInvoices();
             doc = invoices.find(i => i.invoiceNumber === docNumber);
             title = 'فاتورة';
             date = doc?.issueDate;
             break;
+          }
           case 'leads':
             title = 'قائمة المهتمين';
             date = new Date().toISOString();
@@ -77,7 +82,7 @@ const DocViewer = () => {
         } else {
           setError('هذه الوثيقة غير متوفرة أو انتهت صلاحيتها');
         }
-      } catch (err) {
+      } catch {
         setError('حدث خطأ في تحميل الوثيقة');
       }
 
@@ -243,10 +248,8 @@ const DocViewer = () => {
 };
 
 // Report Content Component
-const ReportContent = ({ document, formatDate, formatCurrency }) => {
+const ReportContent = ({ document, formatDate }) => {
   const { doc, title, date, docNumber } = document;
-  const settings = getSettings();
-  const exchangeRate = settings?.exchangeRateUSD || 13000;
 
   return (
     <div className="p-8" dir="rtl">
@@ -321,7 +324,7 @@ const ReportContent = ({ document, formatDate, formatCurrency }) => {
 };
 
 // Decision Content Component
-const DecisionContent = ({ document, formatDate, formatCurrency }) => {
+const DecisionContent = ({ document, formatDate }) => {
   const { doc, title, date, docNumber } = document;
 
   return (

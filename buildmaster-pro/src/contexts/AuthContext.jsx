@@ -26,7 +26,7 @@ export const AuthProvider = ({ children }) => {
     if (storedUser) {
       try {
         setCurrentUser(JSON.parse(storedUser));
-      } catch (e) {
+      } catch {
         localStorage.removeItem(CURRENT_USER_KEY);
       }
     }
@@ -105,7 +105,7 @@ export const AuthProvider = ({ children }) => {
 
   const getAllUsers = () => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    return users.map(({ password, ...user }) => user);
+    return users.map(({ password: _, ...user }) => user);
   };
 
   const deleteUser = (userId) => {

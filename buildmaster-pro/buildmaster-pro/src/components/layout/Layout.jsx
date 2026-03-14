@@ -1,0 +1,108 @@
+import { Outlet } from 'react-router-dom';
+import Sidebar from './Sidebar';
+import Header from './Header';
+import { useState, useEffect } from 'react';
+
+const Layout = () => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      const mobile = width < 768;
+      const tablet = width >= 768 && width < 1024;
+      
+      setIsMobile(mobile);
+      setIsTablet(tablet);
+      
+      // Auto-close sidebar on mobile/tablet
+      if (mobile || tablet) {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Prevent body scroll when sidebar is open on mobile
+  useEffect(() => {
+    if (isMobile && sidebarOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMobile, sidebarOpen]);
+
+  const handleSidebarToggle = () => {
+    if (isMobile || isTablet) {
+      setSidebarOpen(!sidebarOpen);
+    } else {
+      setSidebarCollapsed(!sidebarCollapsed);
+    }
+  };
+
+  const handleCloseSidebar = () => {
+    setSidebarOpen(false);
+  };
+
+  const sidebarWidth = sidebarCollapsed ? 'w-[72px] min-w-[72px]' : 'w-[260px] min-w-[260px]';
+
+  const isMobileOrTablet = isMobile || isTablet;
+
+  return (
+    <div className="flex h-screen bg-[#0f172a] overflow-hidden" dir="rtl">
+      {/* Mobile/Tablet Overlay */}
+      {sidebarOpen && isMobileOrTablet && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 backdrop-blur-sm"
+          onClick={handleCloseSidebar}
+          style={{ touchAction: 'none' }}
+        />
+      )}
+
+      {/* Sidebar */}
+      <div className={`
+        h-full transition-all duration-300 ease-in-out flex-shrink-0
+        ${isMobileOrTablet 
+          ? `fixed top-0 z-50 w-[280px] ${sidebarOpen ? 'translate-x-0' : 'translate-x-full'} ${isMobileOrTablet && 'start-0'}`
+          : `relative ${sidebarWidth}`
+        }
+      `}>
+        <Sidebar 
+          onNavigate={handleCloseSidebar} 
+          collapsed={!isMobileOrTablet && sidebarCollapsed}
+          onToggleCollapse={handleSidebarToggle}
+          isMobile={isMobileOrTablet}
+        />
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {/* Header */}
+        <Header 
+          onMenuClick={handleSidebarToggle}
+          onCollapseClick={!isMobileOrTablet ? handleSidebarToggle : undefined}
+          isCollapsed={!isMobileOrTablet && sidebarCollapsed}
+          isMobile={isMobileOrTablet}
+        />
+
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden">
+          <div className="p-3 sm:p-4 md:p-5 lg:p-6 min-h-full">
+            <Outlet />
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+};
+
+export default Layout;

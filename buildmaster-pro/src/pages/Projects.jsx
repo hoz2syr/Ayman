@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, Eye, FileText, LayoutGrid, Table as TableIcon, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, LayoutGrid, Table as TableIcon, Loader2 } from 'lucide-react';
 import { getProjects, saveProject, deleteProject, getInvoicesByProject, getExpensesByProject, subscribeToTable } from '../utils/storage';
 import Modal from '../components/shared/Modal';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
@@ -31,7 +31,7 @@ const Projects = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showToast]);
 
   useEffect(() => {
     loadProjects();
@@ -50,15 +50,6 @@ const Projects = () => {
     p.location?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getProjectStats = async (projectId) => {
-    const invoices = await getInvoicesByProject(projectId);
-    const expenses = await getExpensesByProject(projectId);
-    return {
-      invoiceCount: invoices.length,
-      expenseCount: expenses.length,
-      totalExpenses: expenses.reduce((sum, e) => sum + parseFloat(e.amount || 0), 0)
-    };
-  };
 
   const [formData, setFormData] = useState({
     name: '',
@@ -117,7 +108,7 @@ const Projects = () => {
     const projectData = {
       ...formData,
       id: editingProject?.id || null,
-      budget: parseFloat(formData.budget) || 0
+      budget: Number.parseFloat(formData.budget) || 0
     };
 
     const resultId = await saveProject(projectData);
@@ -136,7 +127,7 @@ const Projects = () => {
 
   const handleConfirmDelete = async () => {
     if (deleteConfirm.projectId) {
-      const success = await deleteProject(deleteConfirm.projectId);
+      const success = deleteProject(deleteConfirm.projectId);
       if (success) {
         showToast('تم حذف المشروع بنجاح', 'success');
         await loadProjects();
@@ -158,16 +149,6 @@ const Projects = () => {
   };
 
   const statusOptions = ['قيد التنفيذ', 'مكتمل', 'متوقف', 'ملغى'];
-
-  const getStatusBadgeVariant = (status) => {
-    switch (status) {
-      case 'مكتمل': return 'success';
-      case 'قيد التنفيذ': return 'info';
-      case 'متوقف': return 'warning';
-      case 'ملغى': return 'destructive';
-      default: return 'default';
-    }
-  };
 
   return (
     <div className="space-y-6 animate-fadeIn">
@@ -225,79 +206,82 @@ const Projects = () => {
             إضافة مشروع جديد
           </Button>
         </Card>
-      ) : viewMode === 'table' ? (
-        /* Data Table View */
-        <div className="card overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-slate-800">
-              <tr>
-                <th className="text-right p-3 text-sm text-slate-400">اسم المشروع</th>
-                <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الموقع</th>
-                <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">العميل</th>
-                <th className="text-right p-3 text-sm text-slate-400">الحالة</th>
-                <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الميزانية</th>
-                <th className="text-center p-3 text-sm text-slate-400">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
+      ) : (
+        <>
+          {viewMode === 'table' ? (
+            <div className="card overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-slate-800">
+                  <tr>
+                    <th className="text-right p-3 text-sm text-slate-400">اسم المشروع</th>
+                    <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الموقع</th>
+                    <th className="text-right p-3 text-sm text-slate-400 hidden lg:table-cell">العميل</th>
+                    <th className="text-right p-3 text-sm text-slate-400">الحالة</th>
+                    <th className="text-right p-3 text-sm text-slate-400 hidden md:table-cell">الميزانية</th>
+                    <th className="text-center p-3 text-sm text-slate-400">إجراءات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredProjects.map((project) => (
+                    <tr key={project.id} className="border-t border-slate-700 hover:bg-slate-700/30">
+                      <td className="p-3">
+                        <Link to={`/projects/${project.id}`} className="text-white font-medium hover:text-[#3b82f6]">
+                          {project.name}
+                        </Link>
+                      </td>
+                      <td className="p-3 text-slate-300 hidden md:table-cell">{project.location || '-'}</td>
+                      <td className="p-3 text-slate-300 hidden lg:table-cell">{project.client_name || '-'}</td>
+                      <td className="p-3">
+                        <span className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
+                          {project.status}
+                        </span>
+                      </td>
+                      <td className="p-3 text-green-400 hidden md:table-cell">
+                        {Number.parseFloat(project.budget || 0).toLocaleString('ar-SA')} ر.س
+                      </td>
+                      <td className="p-3">
+                        <div className="flex justify-center gap-1">
+                          <Link to={`/projects/${project.id}`} className="p-2 text-blue-500 hover:bg-slate-700 rounded" title="عرض">
+                            <Eye className="w-4 h-4" />
+                          </Link>
+                          <button onClick={() => handleOpenModal(project)} className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded" title="تعديل">
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => handleDeleteClick(project.id)} className="p-2 text-red-500 hover:bg-slate-700 rounded" title="حذف">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredProjects.map((project) => (
-                <tr key={project.id} className="border-t border-slate-700 hover:bg-slate-700/30">
-                  <td className="p-3">
-                    <Link to={`/projects/${project.id}`} className="text-white font-medium hover:text-[#3b82f6]">
-                      {project.name}
-                    </Link>
-                  </td>
-                  <td className="p-3 text-slate-300 hidden md:table-cell">{project.location || '-'}</td>
-                  <td className="p-3 text-slate-300 hidden lg:table-cell">{project.client_name || '-'}</td>
-                  <td className="p-3">
+                <div key={project.id} className="card hover:ring-2 hover:ring-[#3b82f6] transition-all">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-white truncate flex-1">{project.name}</h3>
                     <span className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
                       {project.status}
                     </span>
-                  </td>
-                  <td className="p-3 text-green-400 hidden md:table-cell">
-                    {parseFloat(project.budget || 0).toLocaleString('ar-SA')} ر.س
-                  </td>
-                  <td className="p-3">
-                    <div className="flex justify-center gap-1">
-                      <Link to={`/projects/${project.id}`} className="p-2 text-blue-500 hover:bg-slate-700 rounded" title="عرض">
-                        <Eye className="w-4 h-4" />
-                      </Link>
-                      <button onClick={() => handleOpenModal(project)} className="p-2 text-slate-400 hover:text-[#3b82f6] hover:bg-slate-700 rounded" title="تعديل">
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button onClick={() => handleDeleteClick(project.id)} className="p-2 text-red-500 hover:bg-slate-700 rounded" title="حذف">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
+                  </div>
+                  <div className="space-y-2 text-sm text-slate-400 mb-4">
+                    <p>📍 {project.location || 'غير محدد'}</p>
+                    <p>👤 {project.client_name || 'غير محدد'}</p>
+                    <p>💰 {Number.parseFloat(project.budget || 0).toLocaleString('ar-SA')} ر.س</p>
+                  </div>
+                  <div className="flex gap-2 pt-3 border-t border-slate-700">
+                    <Link to={`/projects/${project.id}`} className="flex-1 text-center py-2 text-[#3b82f6] hover:bg-slate-700 rounded-lg">عرض</Link>
+                    <button onClick={() => handleOpenModal(project)} className="flex-1 text-center py-2 text-slate-400 hover:bg-slate-700 rounded-lg">تعديل</button>
+                    <button onClick={() => handleDeleteClick(project.id)} className="flex-1 text-center py-2 text-red-500 hover:bg-slate-700 rounded-lg">حذف</button>
+                  </div>
+                </div>
               ))}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredProjects.map((project) => (
-            <div key={project.id} className="card hover:ring-2 hover:ring-[#3b82f6] transition-all">
-              <div className="flex items-start justify-between mb-3">
-                <h3 className="text-lg font-semibold text-white truncate flex-1">{project.name}</h3>
-                <span className={`px-2 py-1 rounded-full text-xs text-white ${getStatusColor(project.status)}`}>
-                  {project.status}
-                </span>
-              </div>
-              <div className="space-y-2 text-sm text-slate-400 mb-4">
-                <p>📍 {project.location || 'غير محدد'}</p>
-                <p>👤 {project.client_name || 'غير محدد'}</p>
-                <p>💰 {parseFloat(project.budget || 0).toLocaleString('ar-SA')} ر.س</p>
-              </div>
-              <div className="flex gap-2 pt-3 border-t border-slate-700">
-                <Link to={`/projects/${project.id}`} className="flex-1 text-center py-2 text-[#3b82f6] hover:bg-slate-700 rounded-lg">عرض</Link>
-                <button onClick={() => handleOpenModal(project)} className="flex-1 text-center py-2 text-slate-400 hover:bg-slate-700 rounded-lg">تعديل</button>
-                <button onClick={() => handleDeleteClick(project.id)} className="flex-1 text-center py-2 text-red-500 hover:bg-slate-700 rounded-lg">حذف</button>
-              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       {/* Add/Edit Modal */}
@@ -310,8 +294,9 @@ const Projects = () => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
-              <label className="block text-sm text-slate-400 mb-1">اسم المشروع *</label>
+              <label htmlFor="project-name" className="block text-sm text-slate-400 mb-1">اسم المشروع *</label>
               <input
+                id="project-name"
                 type="text"
                 required
                 value={formData.name}
@@ -322,8 +307,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">الموقع</label>
+              <label htmlFor="project-location" className="block text-sm text-slate-400 mb-1">الموقع</label>
               <LocationPicker
+                id="project-location"
                 value={formData.location}
                 onChange={(location) => setFormData({ ...formData, location })}
                 placeholder="اختر موقع المشروع (اختياري)"
@@ -332,8 +318,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">تاريخ البداية</label>
+              <label htmlFor="project-start-date" className="block text-sm text-slate-400 mb-1">تاريخ البداية</label>
               <DatePicker
+                id="project-start-date"
                 value={formData.startDate}
                 onChange={(date) => setFormData({ ...formData, startDate: date })}
                 placeholder="اختر التاريخ"
@@ -341,8 +328,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">تاريخ النهاية المتوقعة</label>
+              <label htmlFor="project-end-date" className="block text-sm text-slate-400 mb-1">تاريخ النهاية المتوقعة</label>
               <DatePicker
+                id="project-end-date"
                 value={formData.endDate}
                 onChange={(date) => setFormData({ ...formData, endDate: date })}
                 placeholder="اختر التاريخ"
@@ -350,8 +338,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">الحالة</label>
+              <label htmlFor="project-status" className="block text-sm text-slate-400 mb-1">الحالة</label>
               <select
+                id="project-status"
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
                 className="form-input"
@@ -363,8 +352,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">الميزانية (ر.س)</label>
+              <label htmlFor="project-budget" className="block text-sm text-slate-400 mb-1">الميزانية (ر.س)</label>
               <input
+                id="project-budget"
                 type="number"
                 min="0"
                 step="0.01"
@@ -376,8 +366,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">اسم العميل</label>
+              <label htmlFor="project-client-name" className="block text-sm text-slate-400 mb-1">اسم العميل</label>
               <input
+                id="project-client-name"
                 type="text"
                 value={formData.clientName}
                 onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
@@ -387,8 +378,9 @@ const Projects = () => {
             </div>
             
             <div>
-              <label className="block text-sm text-slate-400 mb-1">رقم هاتف العميل</label>
+              <label htmlFor="project-client-phone" className="block text-sm text-slate-400 mb-1">رقم هاتف العميل</label>
               <input
+                id="project-client-phone"
                 type="tel"
                 value={formData.clientPhone}
                 onChange={(e) => setFormData({ ...formData, clientPhone: e.target.value })}
@@ -399,8 +391,9 @@ const Projects = () => {
           </div>
           
           <div>
-            <label className="block text-sm text-slate-400 mb-1">بريد العميل الإلكتروني</label>
+            <label htmlFor="project-client-email" className="block text-sm text-slate-400 mb-1">بريد العميل الإلكتروني</label>
             <input
+              id="project-client-email"
               type="email"
               value={formData.clientEmail}
               onChange={(e) => setFormData({ ...formData, clientEmail: e.target.value })}
@@ -410,8 +403,9 @@ const Projects = () => {
           </div>
           
           <div>
-            <label className="block text-sm text-slate-400 mb-1">الوصف</label>
+            <label htmlFor="project-description" className="block text-sm text-slate-400 mb-1">الوصف</label>
             <textarea
+              id="project-description"
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="form-input min-h-[100px]"

@@ -40,7 +40,7 @@ const Card = forwardRef(
   ({ className, variant, padding, hover, children, ...props }, ref) => {
     return (
       <div
-        className={cn(cardVariants({ variant, padding, hover }))}
+        className={cn(cardVariants({ variant, padding, hover }), className)}
         ref={ref}
         {...props}
       >

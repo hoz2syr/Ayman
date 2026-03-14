@@ -1,14 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Download, FileText, CheckCircle, Loader2 } from 'lucide-react';
 import { getInvoices, deleteInvoice, getProjects, getContractors, saveInvoice, getSettings, getCompanyInfo, subscribeToTable } from '../utils/storage';
 import InvoiceForm from '../components/forms/InvoiceForm';
 import { generateInvoicePDF } from '../utils/PDFService';
 import { exportToWord } from '../utils/exportWord';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { useToast } from '../components/shared/Toast';
-import { Button } from '../components/ui/Button';
-import { Badge } from '../components/ui/Badge';
-import { Card } from '../components/ui/Card';
 
 const Invoices = () => {
   const { showToast } = useToast();
@@ -71,14 +68,6 @@ const Invoices = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-      </div>
-    );
-  }
-
   // Filter invoices
   const filteredInvoices = useMemo(() => {
     let filtered = [...invoices];
@@ -100,6 +89,14 @@ const Invoices = () => {
     
     return filtered;
   }, [invoices, searchTerm, statusFilter]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   const getProjectName = (projectId) => {
     const project = projects.find(p => p.id === projectId);
@@ -229,8 +226,8 @@ const Invoices = () => {
           table: {
             headers: ['الصنف', 'الوحدة', 'الكمية', 'السعر ($)', 'الإجمالي ($)', 'الإجمالي (ل.س)'],
             rows: invoice.items?.map(item => {
-              const qty = parseFloat(item.quantity) || 0;
-              const priceUSD = parseFloat(item.unitPriceUSD) || 0;
+              const qty = Number.parseFloat(item.quantity) || 0;
+              const priceUSD = Number.parseFloat(item.unitPriceUSD) || 0;
               const totalUSD = qty * priceUSD;
               const totalSYP = totalUSD * exchangeRate;
               return [
@@ -269,11 +266,11 @@ const Invoices = () => {
     };
   };
 
-  const totalAmountUSD = filteredInvoices.reduce((sum, i) => sum + parseFloat(i.totalUSD || 0), 0);
-  const totalAmountSYP = filteredInvoices.reduce((sum, i) => sum + parseFloat(i.totalSYP || 0), 0);
+  const totalAmountUSD = filteredInvoices.reduce((sum, i) => sum + Number.parseFloat(i.totalUSD || 0), 0);
+  const totalAmountSYP = filteredInvoices.reduce((sum, i) => sum + Number.parseFloat(i.totalSYP || 0), 0);
   const paidAmount = filteredInvoices
     .filter(i => i.status === 'مدفوع')
-    .reduce((sum, i) => sum + parseFloat(i.totalUSD || 0), 0);
+    .reduce((sum, i) => sum + Number.parseFloat(i.totalUSD || 0), 0);
 
   const statusOptions = [
     { value: 'all', label: 'الكل' },

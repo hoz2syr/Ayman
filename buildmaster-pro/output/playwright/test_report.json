@@ -1,0 +1,33 @@
+{
+  "total_errors": 0,
+  "errors": [],
+  "console_messages": [
+    "[debug] [vite] connecting...",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[debug] [vite] connected.",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[error] In HTML, %s cannot be a descendant of <%s>.\nThis will cause a hydration error.%s <button> button \n\n  ...\n    <RenderedRoute match={{params:{}, ...}} routeContext={{...}}>\n      <Layout>\n        <div className=\"flex h-scr...\" dir=\"rtl\">\n          <Sidebar>\n          <main className=\"flex-1 fle...\">\n            <Header>\n            <div className=\"flex-1 ove...\">\n              <Outlet>\n                <RenderedRoute match={{params:{}, ...}} routeContext={{outlet:null, ...}}>\n                  <Expenses>\n                    <div className=\"space-y-6 ...\">\n                      <div className=\"flex flex-...\">\n                        <div>\n                        <div className=\"flex gap-2\">\n                          <button>\n                          <ExpensePDFButton data={{expenses:[...], ...}} company={{currency:\"SAR\", ...}} ...>\n>                           <button type=\"button\" onClick={function handleClick} disabled={false}>\n>                             <button\n>                               className=\"flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg...\"\n>                               disabled={false}\n>                             >\n                          ...\n                      ...\n",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold",
+    "[debug] [vite] connecting...",
+    "[debug] [vite] connected.",
+    "[info] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold"
+  ],
+  "pages_tested": [
+    "home",
+    "projects",
+    "expenses",
+    "settings",
+    "setup",
+    "engineering-docs"
+  ]
+}

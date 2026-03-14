@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Save } from 'lucide-react';
 import { saveExpense, getSettings } from '../../utils/storage';
 import Modal from '../../components/shared/Modal';

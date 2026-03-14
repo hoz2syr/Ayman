@@ -5,13 +5,15 @@ const handleError = (error, operation) => {
   return null;
 };
 
-const handleResponse = (data, operation) => {
+const handleResponse = (data) => {
   if (data === null || data === undefined) return null;
   if (Array.isArray(data)) return data.filter(item => item !== null);
   return data;
 };
 
-const localStorageGet = (key) => {
+// Legacy localStorage functions kept for potential future use
+// eslint-disable-next-line no-unused-vars
+const _localStorageGet = (key) => {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : null;
@@ -20,7 +22,8 @@ const localStorageGet = (key) => {
   }
 };
 
-const localStorageSet = (key, value) => {
+// eslint-disable-next-line no-unused-vars
+const _localStorageSet = (key, value) => {
   try {
     localStorage.setItem(key, JSON.stringify(value));
     return true;
@@ -302,7 +305,7 @@ export const db = {
       const fileName = `${Date.now()}_${file.name}`;
       const filePath = `${folder}/${fileName}`;
       
-      const { data, error } = await supabase.storage
+      const { data: _uploadData, error } = await supabase.storage
         .from('files')
         .upload(filePath, file);
       

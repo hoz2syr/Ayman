@@ -44,6 +44,26 @@ const EngineeringDocs = () => {
   const [allReports, setAllReports] = useState([]);
   const [allDecisions, setAllDecisions] = useState([]);
 
+  // Form states
+  const [drawingForm, setDrawingForm] = useState({
+    name: '',
+    type: '',
+    projectId: '',
+    notes: '',
+    file: null,
+    fileName: '',
+    fileType: '',
+    relatedReports: [],
+    relatedDecisions: []
+  });
+
+  // Modal states
+  const [drawingModal, setDrawingModal] = useState({ isOpen: false, edit: null });
+  const [reportModal, setReportModal] = useState({ isOpen: false, edit: null });
+  const [decisionModal, setDecisionModal] = useState({ isOpen: false, edit: null });
+  const [viewModal, setViewModal] = useState({ isOpen: false, item: null, type: null });
+  const [deleteConfirm, setDeleteConfirm] = useState({ isOpen: false, type: null, itemId: null });
+
   // Load data
   useEffect(() => {
     const loadData = async () => {
@@ -79,6 +99,9 @@ const EngineeringDocs = () => {
   }, [refreshKey]);
 
   const loadData = () => setRefreshKey(k => k + 1);
+
+  // Handle file change
+  const handleDrawingFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -130,17 +153,7 @@ const EngineeringDocs = () => {
     relatedReports: []
   });
 
-  const loadData = () => setRefreshKey(k => k + 1);
-
-  if (loading) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
-      </div>
-    );
-  }
-
-  // Filtered data
+  // Filtered data (must be before early return - React hooks rule)
   const drawings = useMemo(() => {
     return allDrawings.filter(d => {
       const matchProject = !selectedProject || d.projectId === selectedProject;
@@ -170,6 +183,14 @@ const EngineeringDocs = () => {
       return matchProject && matchSearch;
     });
   }, [allDecisions, selectedProject, searchQuery]);
+
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+      </div>
+    );
+  }
 
   const drawingTypes = ['معماري', 'إنشائي', 'كهربائي', 'ميكانيكي', 'صحي'];
   const decisionStatuses = ['معلق', 'منفذ', 'ملغي'];
@@ -853,7 +874,7 @@ const EngineeringDocs = () => {
                   <input 
                     type="file" 
                     accept=".pdf,.jpg,.jpeg,.png,.dwg,.dxf"
-                    onChange={handleFileUpload}
+                    onChange={handleDrawingFileChange}
                     className="hidden"
                   />
                   <FileImage className="w-10 h-10 text-slate-500 mx-auto mb-2" />

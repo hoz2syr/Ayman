@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
-import { MapPin, Search, X, Check } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import PropTypes from 'prop-types';
+import { MapPin, Search, X } from 'lucide-react';
 
 /**
  * LocationPicker - مكون اختيار الموقع على الخريطة
@@ -11,20 +12,15 @@ import { MapPin, Search, X, Check } from 'lucide-react';
 const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع', className = '', toast }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [mapUrl, setMapUrl] = useState('');
-  const [selectedLocation, setSelectedLocation] = useState(null);
   const wrapperRef = useRef(null);
 
-  // Parse initial coordinates
-  useEffect(() => {
-    if (value) {
-      const [lat, lng] = value.split(',').map(Number);
-      if (!isNaN(lat) && !isNaN(lng)) {
-        setSelectedLocation({ lat, lng });
-        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01}%2C${lat-0.01}%2C${lng+0.01}%2C${lat+0.01}&layer=mapnik&marker=${lat}%2C${lng}`);
-      }
-    }
-  }, []);
+  // Derived state - no need for useEffect or useState
+  const parsedLocation = useMemo(() => {
+    if (!value) return null;
+    const [lat, lng] = value.split(',').map(Number);
+    if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+    return { lat, lng };
+  }, [value]);
 
   // إغلاق النافذة عند الضغط خارجها
   useEffect(() => {
@@ -37,6 +33,17 @@ const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع'
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const mapUrl = useMemo(() => {
+    if (!parsedLocation) return '';
+    const { lat, lng } = parsedLocation;
+    return `https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01}%2C${lat-0.01}%2C${lng+0.01}%2C${lat+0.01}&layer=mapnik&marker=${lat}%2C${lng}`;
+  }, [parsedLocation]);
+
+  const formatDisplayLocation = () => {
+    if (!parsedLocation) return '';
+    return `${parsedLocation.lat.toFixed(6)}, ${parsedLocation.lng.toFixed(6)}`;
+  };
+
   const handleSearch = () => {
     if (searchTerm.trim()) {
       // Use Nominatim for geocoding (OpenStreetMap)
@@ -47,59 +54,58 @@ const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع'
 
   const handleManualInput = () => {
     const coords = prompt('أدخل الإحداثيات بالتنسيق: lat,lng\nمثال: 24.7136,46.6753');
-    if (coords) {
-      const [lat, lng] = coords.split(',').map(Number);
-      if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
-        const newValue = `${lat},${lng}`;
-        onChange?.(newValue);
-        setSelectedLocation({ lat, lng });
-        setMapUrl(`https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.01}%2C${lat-0.01}%2C${lng+0.01}%2C${lat+0.01}&layer=mapnik&marker=${lat}%2C${lng}`);
+    if (!coords) return;
+    
+    const [lat, lng] = coords.split(',').map(Number);
+    if (Number.isNaN(lat) || Number.isNaN(lng) || lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      if (toast) {
+        toast('إحداثيات غير صالحة!', 'error');
       } else {
-        if (toast) {
-          toast('إحداثيات غير صالحة!', 'error');
-        } else {
-          alert('إحداثيات غير صالحة!');
-        }
+        alert('إحداثيات غير صالحة!');
       }
+      return;
     }
+    
+    onChange?.(`${lat},${lng}`);
   };
 
   const handleClear = () => {
     onChange?.('');
-    setSelectedLocation(null);
-    setMapUrl('');
-  };
-
-  const formatDisplayLocation = () => {
-    if (!selectedLocation) return '';
-    return `${selectedLocation.lat.toFixed(6)}, ${selectedLocation.lng.toFixed(6)}`;
   };
 
   return (
     <div ref={wrapperRef} className={`relative ${className}`}>
-      <div
+      <button
+        type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="form-input cursor-pointer flex items-center justify-between hover:border-[#3b82f6] transition-colors min-h-[46px]"
+        className="form-input cursor-pointer flex items-center justify-between hover:border-[#3b82f6] transition-colors min-h-[46px] w-full text-right"
       >
-        <span className={selectedLocation ? 'text-white text-sm' : 'text-slate-400'}>
-          {selectedLocation ? formatDisplayLocation() : placeholder}
+        <span className={parsedLocation ? 'text-white text-sm' : 'text-slate-400'}>
+          {parsedLocation ? formatDisplayLocation() : placeholder}
         </span>
         <div className="flex items-center gap-2">
-          {selectedLocation && (
-            <button
-              type="button"
+          {parsedLocation && (
+            <span
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 handleClear();
               }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.stopPropagation();
+                  handleClear();
+                }
+              }}
               className="p-1 text-slate-400 hover:text-red-500"
             >
               <X className="w-4 h-4" />
-            </button>
+            </span>
           )}
           <MapPin className="w-5 h-5 text-slate-400" />
         </div>
-      </div>
+      </button>
 
       {isOpen && (
         <div className="absolute z-[60] mt-2 w-96 bg-[#1e293b] rounded-xl shadow-2xl border border-slate-700 overflow-hidden animate-fadeIn">
@@ -115,7 +121,7 @@ const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع'
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ابحث عن موقع..."
                 className="form-input flex-1 text-sm"
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               />
               <button
                 onClick={handleSearch}
@@ -128,15 +134,15 @@ const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع'
 
           {/* Map iframe */}
           <div className="h-64 bg-slate-800">
-            {selectedLocation ? (
+            {parsedLocation ? (
               <iframe
                 title="Selected Location"
                 width="100%"
                 height="100%"
-                frameBorder="0"
                 src={mapUrl}
                 style={{ border: 0 }}
                 allowFullScreen
+                loading="lazy"
               />
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 p-4">
@@ -166,6 +172,21 @@ const LocationPicker = ({ value, onChange, placeholder = 'اختر الموقع'
       )}
     </div>
   );
+};
+
+LocationPicker.propTypes = {
+  value: PropTypes.string,
+  onChange: PropTypes.func.isRequired,
+  placeholder: PropTypes.string,
+  className: PropTypes.string,
+  toast: PropTypes.func,
+};
+
+LocationPicker.defaultProps = {
+  value: '',
+  placeholder: 'اختر الموقع',
+  className: '',
+  toast: undefined,
 };
 
 export default LocationPicker;
