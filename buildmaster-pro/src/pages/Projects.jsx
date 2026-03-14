@@ -177,50 +177,47 @@ const Projects = () => {
           <span className="mr-3 text-slate-400">جاري تحميل المشاريع...</span>
         </div>
       ) : (
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
-        <div className="relative flex-1 max-w-full sm:max-w-md">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 z-10" />
-          <input
-            type="text"
-            placeholder="البحث في المشاريع..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full h-10 rounded-lg border border-slate-600 bg-slate-800/50 px-4 pr-10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50">
-            <button
-              onClick={() => setViewMode('table')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title="عرض جدولي"
-            >
-              <TableIcon className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
-              title="عرض بطاقات"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 md:gap-4">
+            <div className="relative flex-1 max-w-full sm:max-w-md">
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 md:w-5 md:h-5 text-slate-400 z-10" />
+              <input
+                type="text"
+                placeholder="البحث في المشاريع..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-10 rounded-lg border border-slate-600 bg-slate-800/50 px-4 pr-10 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="flex bg-slate-800/50 rounded-lg p-1 border border-slate-700/50">
+                <button
+                  onClick={() => setViewMode('table')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="عرض جدولي"
+                >
+                  <TableIcon className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-white'}`}
+                  title="عرض بطاقات"
+                >
+                  <LayoutGrid className="w-4 h-4" />
+                </button>
+              </div>
+              <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">مشروع جديد</span>
+                <span className="sm:hidden">+</span>
+              </Button>
+            </div>
           </div>
-          <Button onClick={() => handleOpenModal()} className="flex items-center gap-2">
-            <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">مشروع جديد</span>
-            <span className="sm:hidden">+</span>
-          </Button>
         </div>
-      </div>
+      )}
 
       {/* Projects View */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
-          <span className="mr-3 text-slate-400">جاري تحميل المشاريع...</span>
-        </div>
-      ) : filteredProjects.length === 0 ? (
+      {filteredProjects.length === 0 ? (
         <Card variant="default" className="text-center py-12">
           <p className="text-slate-400 mb-4">لا توجد مشاريع بعد</p>
           <Button onClick={() => handleOpenModal()} className="inline-flex items-center gap-2">
@@ -301,7 +298,6 @@ const Projects = () => {
             </div>
           ))}
         </div>
-      )}
       )}
 
       {/* Add/Edit Modal */}
