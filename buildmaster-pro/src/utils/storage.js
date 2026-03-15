@@ -281,39 +281,48 @@ export const setCompanyInfo = async (companyInfo) => {
     return false;
   }
 
+  const now = new Date().toISOString();
+  const companyData = {
+    name: companyInfo.name || '',
+    owner: companyInfo.owner || '',
+    phone: companyInfo.phone || '',
+    email: companyInfo.email || '',
+    address: companyInfo.address || '',
+    logo: companyInfo.logo || null,
+    signature: companyInfo.signature || null,
+    stamp: companyInfo.stamp || null,
+    tax_number: companyInfo.taxNumber || '',
+    commercial_record: companyInfo.commercialRecord || '',
+    updated_at: now,
+  };
+
   // Check if company exists
   const { data: existing } = await supabase
     .from('company_info')
     .select('id')
     .limit(1)
-    .single();
+    .maybeSingle();
 
   let result;
   if (existing) {
     // Update existing
     result = await supabase
       .from('company_info')
-      .update({
-        ...companyInfo,
-        updated_at: new Date().toISOString()
-      })
+      .update(companyData)
       .eq('id', existing.id)
       .select()
-      .single();
+      .maybeSingle();
   } else {
     // Insert new
+    companyData.created_at = now;
     result = await supabase
       .from('company_info')
-      .insert({
-        ...companyInfo,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
+      .insert(companyData)
       .select()
-      .single();
+      .maybeSingle();
   }
 
-  if (result.error) {
+  if (result?.error) {
     console.error('Error saving company info:', result.error);
     return false;
   }
