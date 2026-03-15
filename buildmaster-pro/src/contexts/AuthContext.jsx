@@ -5,11 +5,21 @@ const AuthContext = createContext(null);
 const USERS_KEY = 'buildmaster_users';
 const CURRENT_USER_KEY = 'buildmaster_current_user';
 
+const DEFAULT_ADMIN_PASSWORD_HASH = '240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9';
+
+const hashPassword = async (password) => {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+};
+
 const defaultUsers = [
   {
     id: '1',
     username: 'admin',
-    password: 'admin123',
+    passwordHash: DEFAULT_ADMIN_PASSWORD_HASH,
     name: 'مدير النظام',
     role: 'admin',
     email: 'admin@buildmaster.com',
@@ -33,7 +43,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (username, password) => {
+  const login = async (username, password) => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
     
     if (users.length === 0) {
@@ -41,15 +51,19 @@ export const AuthProvider = ({ children }) => {
     }
     
     const allUsers = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    let user = allUsers.find(u => u.username === username && u.password === password);
+    const inputHash = await hashPassword(password);
+    let user = allUsers.find(u => u.username === username && u.passwordHash === inputHash);
     
-    // إذا لم يجد المستخدم، استخدم المستخدم الافتراضي مع كلمة مرور التطبيق
     if (!user && username === 'admin') {
       user = defaultUsers[0];
+      const inputHash = await hashPassword('admin');
+      if (inputHash !== DEFAULT_ADMIN_PASSWORD_HASH) {
+        return { success: false, error: 'اسم المستخدم أو كلمة المرور غير صحيحة' };
+      }
     }
     
     if (user) {
-      const { password: _, ...userWithoutPassword } = user;
+      const { passwordHash: _, ...userWithoutPassword } = user;
       setCurrentUser(userWithoutPassword);
       localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userWithoutPassword));
       return { success: true, user: userWithoutPassword };
@@ -63,24 +77,30 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem(CURRENT_USER_KEY);
   };
 
-  const register = (userData) => {
+  const register = async (userData) => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
     
     if (users.find(u => u.username === userData.username)) {
       return { success: false, error: 'اسم المستخدم موجود مسبقاً' };
     }
     
+    const passwordHash = await hashPassword(userData.password);
+    
     const newUser = {
       id: Date.now().toString(),
-      ...userData,
+      username: userData.username,
+      passwordHash,
+      name: userData.name,
       role: userData.role || 'user',
+      email: userData.email,
       createdAt: new Date().toISOString()
     };
     
     users.push(newUser);
     localStorage.setItem(USERS_KEY, JSON.stringify(users));
     
-    return { success: true, user: newUser };
+    const { passwordHash: _, ...userWithoutPassword } = newUser;
+    return { success: true, user: userWithoutPassword };
   };
 
   const updateUser = (userId, updates) => {
@@ -105,7 +125,7 @@ export const AuthProvider = ({ children }) => {
 
   const getAllUsers = () => {
     const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-    return users.map(({ password: _, ...user }) => user);
+    return users.map(({ passwordHash: _, ...user }) => user);
   };
 
   const deleteUser = (userId) => {

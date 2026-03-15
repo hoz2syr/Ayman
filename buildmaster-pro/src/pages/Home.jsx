@@ -70,7 +70,7 @@ const Home = () => {
 
     // Realtime subscription - تحديث تلقائي عند تغيير البيانات
     const unsubscribes = [];
-    const tables = ['projects', 'expenses', 'invoices', 'contractors', 'units', 'leads', 'contracts'];
+    const tables = ['projects', 'expenses', 'invoices', 'contractors', 'units', 'leads', 'contracts', 'company_info', 'settings'];
     
     tables.forEach(table => {
       const unsub = subscribeToTable(table, () => {
